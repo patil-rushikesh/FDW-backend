@@ -102,5 +102,18 @@ def migrate_users():
     
     return jsonify({"message": f"Migrated {migrated_count} users to signin collection"}), 200
 
+# User login endpoint
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    if not data or not all(k in data for k in ["_id", "password"]):
+        return jsonify({"error": "Missing required fields"}), 400
+    
+    user = db_signin.find_one({"_id": data["_id"]})
+    if user and bcrypt.checkpw(data["password"].encode('utf-8'), user["password"]):
+        user_data = db_users.find_one({"_id": data["_id"]})
+        return dumps(user_data), 200
+    return jsonify({"error": "Invalid credentials"}), 401
+
 if __name__ == '__main__':
     app.run(debug=True)
