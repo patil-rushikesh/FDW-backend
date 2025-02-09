@@ -167,5 +167,49 @@ def login():
 
     return jsonify({"error": "Invalid credentials"}), 401
 
+
+
+#Section Data Adding Start here
+@app.route('/<department>/<user_id>/A', methods=['POST'])
+def handle_post_A(department, user_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON data"}), 400
+        
+        # Access the collection named after the department
+        collection = department_collections.get(department)
+        
+        #first we have to verify from lookup that the user exist in that department or not then only add data
+        
+        
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        
+        lookup = collection.find_one({"_id": "lookup"}).get("data")
+        print(lookup)
+        if lookup is None:
+            return jsonify({"error": "Invalid department"}), 400
+        user = lookup.get(user_id)
+        if user is None:
+            return jsonify({"error": "Invalid user"}), 400
+        
+        # Update the document for the given user_id
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"A": data}},
+            upsert=True
+        )
+        
+        if result.matched_count > 0:
+            message = "Data updated successfully"
+        else:
+            message = "Data inserted successfully"
+        
+        return jsonify({"message": message}), 200
+    
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True)
