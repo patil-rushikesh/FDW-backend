@@ -5,11 +5,21 @@ import os
 import bcrypt
 from dotenv import load_dotenv
 from mail import send_username_password_mail
+from flask_cors import CORS  # Add this import
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
+# Configure CORS
+CORS(app, resources={
+    r"/*": {
+        "origins": ["http://localhost:5173"],  # Your React app's URL
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "supports_credentials": True
+    }
+})
 
 # MongoDB Configuration
 app.config["MONGO_URI"] = os.getenv("MONGO_URI")
@@ -61,7 +71,6 @@ def add_user():
 
         # Get the correct department collection
         department = data["dept"]
-        print(f"----------------------{department}--------------------")
         collection = department_collections.get(department)
 
         if collection is not None:
@@ -70,9 +79,6 @@ def add_user():
                 {"$set": {f"data.{data['_id']}": data["role"]}},
                 upsert=True
             )
-
-            # Send email with username and password
-            # send_username_password_mail(data["mail"], data["_id"], data["_id"])
 
             return jsonify({"message": f"User added successfully to {department}"}), 201
         else:
@@ -138,8 +144,13 @@ def migrate_users():
     return jsonify({"message": f"Migrated {migrated_count} users to signin collection"}), 200
 
 # User login
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['POST', 'OPTIONS'])  # Added OPTIONS method
 def login():
+    # Handle preflight request
+    if request.method == 'OPTIONS':
+        response = app.make_default_options_response()
+        return response
+
     data = request.json
     if not data or not all(k in data for k in ["_id", "password"]):
         return jsonify({"error": "Missing required fields"}), 400
@@ -147,7 +158,12 @@ def login():
     user = db_signin.find_one({"_id": data["_id"]})
     if user and bcrypt.checkpw(data["password"].encode('utf-8'), user["password"]):
         user_data = db_users.find_one({"_id": data["_id"]})
-        return dumps(user_data), 200
+        response = app.response_class(
+            response=dumps(user_data),
+            status=200,
+            mimetype='application/json'
+        )
+        return response
 
     return jsonify({"error": "Invalid credentials"}), 401
 
