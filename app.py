@@ -5,6 +5,7 @@ from bson.json_util import dumps
 import os
 import bcrypt
 from dotenv import load_dotenv
+from mail import send_username_password_mail
 
 load_dotenv()
 app = Flask(__name__)
@@ -39,6 +40,8 @@ def add_user():
         # Insert into signin collection
         signin_data = {"_id": data["_id"], "password": hashed_password}
         db_signin.insert_one(signin_data)
+        
+        send_username_password_mail(data["mail"], data["_id"], data["_id"])
         
         return jsonify({"message": "User added successfully"}), 201
     except Exception as e:
