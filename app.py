@@ -211,5 +211,18 @@ def handle_post_A(department, user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/<department>/<user_id>/A', methods=['GET'])
+def get_section_A(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is not None:
+            user = collection.find_one({"_id": user_id})
+            if user:
+                return jsonify(user.get("A"))
+            return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+        
+
 if __name__ == '__main__':
     app.run(debug=True)
