@@ -2,18 +2,21 @@ from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from bson.json_util import dumps
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 app = Flask(__name__)
 
 # MongoDB Configuration
-app.config["MONGO_URI"] = "mongodb+srv://teamaansh:teamaansh@fdw.fxn1t.mongodb.net/profile"
+app.config["MONGO_URI"] = os.getenv("MONGO_URI")
 mongo = PyMongo(app)
 
 db = mongo.db.users  # Collection reference
 
 # Health check endpoint
 @app.route('/', methods=['GET'])
-def ping():
+def test():
     return jsonify({"message": "Welcome to FDW project"}), 200
 
 # Create a new user
