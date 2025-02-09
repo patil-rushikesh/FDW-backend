@@ -122,7 +122,7 @@ def update_user(user_id):
 def delete_user(user_id):
     result = db_users.delete_one({"_id": user_id})
     db_signin.delete_one({"_id": user_id})  # Remove from signin collection
-
+    
     if result.deleted_count:
         return jsonify({"message": "User deleted successfully"}), 200
     return jsonify({"error": "User not found"}), 404
@@ -140,6 +140,15 @@ def migrate_users():
             hashed_password = bcrypt.hashpw(user_id.encode('utf-8'), salt)
             db_signin.insert_one({"_id": user_id, "password": hashed_password})
             migrated_count += 1
+        department = user["dept"]
+        collection = department_collections.get(department)
+        if collection is not None:
+            collection.update_one(
+                {"_id": "lookup"},
+                {"$set": {f"data.{user_id}": user["role"]}},
+                upsert=True
+            )
+            
 
     return jsonify({"message": f"Migrated {migrated_count} users to signin collection"}), 200
 
