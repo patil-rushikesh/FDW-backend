@@ -1,49 +1,83 @@
 from flask import Flask, request, jsonify
 from flask_pymongo import PyMongo
-from bson.objectid import ObjectId
 from bson.json_util import dumps
 import os
 import bcrypt
 from dotenv import load_dotenv
 from mail import send_username_password_mail
 
+# Load environment variables
 load_dotenv()
+
 app = Flask(__name__)
 
 # MongoDB Configuration
 app.config["MONGO_URI"] = os.getenv("MONGO_URI")
-mongo = PyMongo(app)
+app.config["MONGO_URI_FDW"] = os.getenv("MONGO_URI_FDW")
 
-db_users = mongo.db.users  # Users Collection
-db_signin = mongo.db.signin  # Signin Collection
+mongo = PyMongo(app, uri=app.config["MONGO_URI"])
+mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
 
-# Health check endpoint
+# Collections
+db_users = mongo.db.users
+db_signin = mongo.db.signin
+
+# Department-based collections in the FDW database
+department_collections = {
+    "AIML": mongo_fdw.db.AIML,
+    "ASH": mongo_fdw.db.ASH,
+    "Civil": mongo_fdw.db.Civil,
+    "Computer": mongo_fdw.db.Computer,
+    "Computer(Regional)": mongo_fdw.db.Computer_Regional,
+    "ENTC": mongo_fdw.db.ENTC,
+    "IT": mongo_fdw.db.IT,
+    "Mechanical": mongo_fdw.db.Mechanical
+}
+
+# Health check
 @app.route('/', methods=['GET'])
-def test():
+def health_check():
     return jsonify({"message": "Welcome to FDW project"}), 200
 
-# Create a new user and add them to both users and signin collections
+# Create a new user
 @app.route('/users', methods=['POST'])
 def add_user():
     data = request.json
-    if not data or not all(k in data for k in ["_id", "name", "role", "dept", "mail", "mob"]):
+    required_fields = ["_id", "name", "role", "dept", "mail", "mob"]
+
+    if not data or not all(k in data for k in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
-    
+
     try:
         # Insert into users collection
         db_users.insert_one(data)
-        
+
         # Hash the password (use _id as the password initially)
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(data["_id"].encode('utf-8'), salt)
-        
+
         # Insert into signin collection
-        signin_data = {"_id": data["_id"], "password": hashed_password}
-        db_signin.insert_one(signin_data)
-        
-        send_username_password_mail(data["mail"], data["_id"], data["_id"])
-        
-        return jsonify({"message": "User added successfully"}), 201
+        db_signin.insert_one({"_id": data["_id"], "password": hashed_password})
+
+        # Get the correct department collection
+        department = data["dept"]
+        print(f"----------------------{department}--------------------")
+        collection = department_collections.get(department)
+
+        if collection is not None:
+            collection.update_one(
+                {"_id": "lookup"},
+                {"$set": {f"data.{data['_id']}": data["role"]}},
+                upsert=True
+            )
+
+            # Send email with username and password
+            # send_username_password_mail(data["mail"], data["_id"], data["_id"])
+
+            return jsonify({"message": f"User added successfully to {department}"}), 201
+        else:
+            return jsonify({"error": "Invalid department"}), 400
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -53,7 +87,7 @@ def get_users():
     users = db_users.find()
     return dumps(users), 200
 
-# Get a single user by ID
+# Get a user by ID
 @app.route('/users/<string:user_id>', methods=['GET'])
 def get_user(user_id):
     user = db_users.find_one({"_id": user_id})
@@ -65,13 +99,14 @@ def get_user(user_id):
 @app.route('/users/<string:user_id>', methods=['PUT'])
 def update_user(user_id):
     data = request.json
-    updated_data = {k: v for k, v in data.items() if k in ["name", "role", "dept", "mail", "mob"]}
-    
+    allowed_fields = ["name", "role", "dept", "mail", "mob"]
+    updated_data = {k: v for k, v in data.items() if k in allowed_fields}
+
     if not updated_data:
         return jsonify({"error": "No valid fields to update"}), 400
-    
+
     result = db_users.update_one({"_id": user_id}, {"$set": updated_data})
-    
+
     if result.modified_count:
         return jsonify({"message": "User updated successfully"}), 200
     return jsonify({"error": "User not found or no changes made"}), 404
@@ -80,39 +115,40 @@ def update_user(user_id):
 @app.route('/users/<string:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     result = db_users.delete_one({"_id": user_id})
-    db_signin.delete_one({"_id": user_id})  # Also remove from signin collection
+    db_signin.delete_one({"_id": user_id})  # Remove from signin collection
+
     if result.deleted_count:
         return jsonify({"message": "User deleted successfully"}), 200
     return jsonify({"error": "User not found"}), 404
 
-# Migrate all users from users collection to signin collection
+# Migrate all users to signin collection
 @app.route('/migrate_users', methods=['POST'])
 def migrate_users():
     users = db_users.find()
     migrated_count = 0
-    
+
     for user in users:
         user_id = user["_id"]
-        salt = bcrypt.gensalt()
-        hashed_password = bcrypt.hashpw(user_id.encode('utf-8'), salt)
-        
         if not db_signin.find_one({"_id": user_id}):
+            salt = bcrypt.gensalt()
+            hashed_password = bcrypt.hashpw(user_id.encode('utf-8'), salt)
             db_signin.insert_one({"_id": user_id, "password": hashed_password})
             migrated_count += 1
-    
+
     return jsonify({"message": f"Migrated {migrated_count} users to signin collection"}), 200
 
-# User login endpoint
+# User login
 @app.route('/login', methods=['POST'])
 def login():
     data = request.json
     if not data or not all(k in data for k in ["_id", "password"]):
         return jsonify({"error": "Missing required fields"}), 400
-    
+
     user = db_signin.find_one({"_id": data["_id"]})
     if user and bcrypt.checkpw(data["password"].encode('utf-8'), user["password"]):
         user_data = db_users.find_one({"_id": data["_id"]})
         return dumps(user_data), 200
+
     return jsonify({"error": "Invalid credentials"}), 401
 
 if __name__ == '__main__':
