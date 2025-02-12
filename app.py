@@ -395,6 +395,7 @@ def get_section_B(department, user_id):
             return jsonify({"error": "User not found"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
         
 
 if __name__ == '__main__':
