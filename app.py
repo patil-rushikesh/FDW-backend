@@ -385,7 +385,7 @@ def handle_post_D(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 @app.route('/<department>/<user_id>/D', methods=['GET'])
-def get_section_B(department, user_id):
+def get_section_D(department, user_id):
     try:
         collection = department_collections.get(department)
         if collection is not None:
