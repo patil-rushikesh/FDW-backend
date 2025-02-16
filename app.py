@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file, make_response
+from flask import Flask, request, jsonify, send_file, make_response, send_from_directory
 from flask_pymongo import PyMongo
 from bson.json_util import dumps
 import os
@@ -17,6 +17,9 @@ from werkzeug.utils import secure_filename
 import cloudinary
 import cloudinary.uploader
 import cloudinary.api
+# Add these imports at the top
+from gridfs import GridFS
+from bson.objectid import ObjectId
 
 
 # Load environment variables
@@ -43,6 +46,9 @@ mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
 # Collections
 db_users = mongo.db.users
 db_signin = mongo.db.signin
+
+# GridFS instance
+fs = GridFS(mongo_fdw.db)
 
 # Department-based collections in the FDW database
 department_collections = {
@@ -705,57 +711,61 @@ def generate_document(department, user_id, format):
             doc.save(temp_docx)
             convert(temp_docx, output_path)
             
-            try:
-                # Upload to Cloudinary
-                upload_result = cloudinary.uploader.upload(
-                    output_path,
-                    folder="teacher_review_assets",
-                    resource_type="raw",
-                    public_id=f"appraisal_{user_id}_{int(time.time())}",
-                    format="pdf",
-                    options = {
-                        "access_type": "anonymous", 
-                    }
+            # Store PDF in GridFS
+            with open(output_path, 'rb') as pdf_file:
+                file_id = fs.put(
+                    pdf_file,
+                    filename=safe_filename,
+                    user_id=user_id,
+                    department=department,
+                    content_type='application/pdf'
                 )
-                
-                asset_id = upload_result['asset_id']
-                version_id = upload_result['version_id']
-                url = cloudinary.utils.download_backedup_asset(asset_id, version_id)
-                print(f"Cloudinary URL: {url}")
-                # Print Cloudinary URL to terminal
-                print(f"Cloudinary Secure URL: {upload_result['secure_url']}")
-                
-                print(f"Cloudinary URL: {upload_result['url']}")
-            except Exception as cloud_error:
-                print(f"Cloudinary upload error: {str(cloud_error)}")
-                
+            
+            # Update user document with file reference
+            collection.update_one(
+                {"_id": user_id},
+                {"$set": {
+                    "appraisal_pdf": {
+                        "file_id": str(file_id),
+                        "filename": safe_filename,
+                        "upload_date": datetime.now()
+                    }
+                }}
+            )
             
             mimetype = 'application/pdf'
+            
         else:
             # Handle DOCX generation
             safe_filename = secure_filename(f"filled_appraisal_{user_id}.docx")
             output_path = os.path.join(temp_dir, safe_filename)
             doc.save(output_path)
             
-            try:
-                # Upload to Cloudinary
-                upload_result = cloudinary.uploader.upload(
-                    output_path,
-                    folder="teacher_review_assets",
-                    resource_type="raw",
-                    public_id=f"appraisal_{user_id}_{int(time.time())}",
-                    format="docx"
+            # Store DOCX in GridFS
+            with open(output_path, 'rb') as docx_file:
+                file_id = fs.put(
+                    docx_file,
+                    filename=safe_filename,
+                    user_id=user_id,
+                    department=department,
+                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
                 )
-                # Print Cloudinary URL to terminal
-                print(f"Cloudinary Secure URL: {upload_result['secure_url']}")
-                
-                print(f"Cloudinary URL: {upload_result['url']}")
-            except Exception as cloud_error:
-                print(f"Cloudinary upload error: {str(cloud_error)}")
+            
+            # Update user document with file reference
+            collection.update_one(
+                {"_id": user_id},
+                {"$set": {
+                    "appraisal_docx": {
+                        "file_id": str(file_id),
+                        "filename": safe_filename,
+                        "upload_date": datetime.now()
+                    }
+                }}
+            )
             
             mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-        # Simply send the file
+        # Send file
         return send_file(
             output_path,
             as_attachment=True,
@@ -811,11 +821,43 @@ def cleanup_temp_files():
 import time
 from apscheduler.schedulers.background import BackgroundScheduler
 import pythoncom
+from datetime import datetime
 
 # Add this after your app initialization
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=cleanup_temp_files, trigger="interval", minutes=60)
 scheduler.start()
+
+@app.route('/<department>/<user_id>/download/<format>', methods=['GET'])
+def get_stored_document(department, user_id, format):
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+            
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Get file reference based on format
+        file_ref = user_doc.get(f"appraisal_{format}")
+        if not file_ref:
+            return jsonify({"error": "Document not found"}), 404
+            
+        # Get file from GridFS
+        file_id = ObjectId(file_ref['file_id'])
+        grid_out = fs.get(file_id)
+        
+        # Return the file
+        return send_file(
+            io.BytesIO(grid_out.read()),
+            as_attachment=True,
+            download_name=file_ref['filename'],
+            mimetype=grid_out.content_type
+        )
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
