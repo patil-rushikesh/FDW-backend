@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify,send_file
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_pymongo import PyMongo
 from bson.json_util import dumps
 import os
@@ -14,6 +14,10 @@ import json
 import requests
 from docx import Document
 from werkzeug.utils import secure_filename
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
+
 
 # Load environment variables
 load_dotenv()
@@ -648,6 +652,16 @@ def generate_filled_document(department, user_id):
     
 from docx2pdf import convert
 import tempfile
+
+import cloudinary
+import cloudinary.uploader
+# Add after app initialization
+cloudinary.config(
+    cloud_name="dfbuztt4g",  # Add your cloud name
+    api_key="768753868147243",
+    api_secret="BD0XqxX5uuEis4JdmvsJerqEArA"    # Add your API secret
+)
+
 @app.route('/<department>/<user_id>/generate-doc/<format>', methods=['GET'])
 def generate_document(department, user_id, format):
     if format not in ['pdf', 'docx']:
@@ -658,24 +672,22 @@ def generate_document(department, user_id, format):
     try:
         # Initialize COM for this thread
         pythoncom.CoInitialize()
-        # Get the department collection
+        
+        # Get user data and generate document
         collection = department_collections.get(department)
         if collection is None:
             return jsonify({"error": "Invalid department"}), 400
 
-        # Get user data directly from MongoDB
         user_doc = collection.find_one({"_id": user_id})
         if not user_doc:
             return jsonify({"error": "User data not found"}), 404
 
-        # Create data structure
         data = {
             'A': user_doc.get('A', {}),
             'B': user_doc.get('B', {}),
             'C': user_doc.get('C', {})
         }
 
-        # Generate document
         doc = fill_template_document(data, user_id, department)
         
         # Create temporary directory
@@ -689,25 +701,60 @@ def generate_document(department, user_id, format):
             temp_docx = os.path.join(temp_dir, safe_filename_docx)
             output_path = os.path.join(temp_dir, safe_filename)
             
-            # Save temporary DOCX and convert to PDF
+            # Save and convert to PDF
             doc.save(temp_docx)
             convert(temp_docx, output_path)
+            
+            try:
+                # Upload to Cloudinary
+                upload_result = cloudinary.uploader.upload(
+                    output_path,
+                    folder="teacher_review_assets",
+                    resource_type="raw",
+                    public_id=f"appraisal_{user_id}_{int(time.time())}",
+                    format="pdf"
+                )
+                # Print Cloudinary URL to terminal
+                print(f"Cloudinary Secure URL: {upload_result['secure_url']}")
+                
+                print(f"Cloudinary URL: {upload_result['url']}")
+            except Exception as cloud_error:
+                print(f"Cloudinary upload error: {str(cloud_error)}")
+                
+            
             mimetype = 'application/pdf'
         else:
             # Handle DOCX generation
             safe_filename = secure_filename(f"filled_appraisal_{user_id}.docx")
             output_path = os.path.join(temp_dir, safe_filename)
             doc.save(output_path)
+            
+            try:
+                # Upload to Cloudinary
+                upload_result = cloudinary.uploader.upload(
+                    output_path,
+                    folder="teacher_review_assets",
+                    resource_type="raw",
+                    public_id=f"appraisal_{user_id}_{int(time.time())}",
+                    format="docx"
+                )
+                # Print Cloudinary URL to terminal
+                print(f"Cloudinary Secure URL: {upload_result['secure_url']}")
+                
+                print(f"Cloudinary URL: {upload_result['url']}")
+            except Exception as cloud_error:
+                print(f"Cloudinary upload error: {str(cloud_error)}")
+            
             mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        
-        # Send file
+
+        # Simply send the file
         return send_file(
             output_path,
             as_attachment=True,
             download_name=safe_filename,
             mimetype=mimetype
         )
-        
+
     except Exception as e:
         # Cleanup on error
         for path in [temp_docx, output_path]:
@@ -718,13 +765,26 @@ def generate_document(department, user_id, format):
                     pass
         return jsonify({"error": str(e)}), 500
     finally:
-        # Cleanup temporary files
-        if temp_docx and os.path.exists(temp_docx):
-            try:
-                os.remove(temp_docx)
-            except OSError:
-                pass
-            
+        # Cleanup temporary files and uninitialize COM
+        for path in [temp_docx, output_path]:
+            if path and os.path.exists(path):
+                try:
+                    os.remove(path)
+                except OSError:
+                    pass
+        pythoncom.CoUninitialize()
+
+# Add a download endpoint to handle direct file downloads
+@app.route('/download/<filename>')
+def download_file(filename):
+    try:
+        return send_from_directory(
+            os.path.join(os.getcwd(), 'temp'),
+            filename,
+            as_attachment=True
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 404
 
 # Add this function to clean up old temporary files
 def cleanup_temp_files():
