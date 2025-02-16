@@ -712,8 +712,16 @@ def generate_document(department, user_id, format):
                     folder="teacher_review_assets",
                     resource_type="raw",
                     public_id=f"appraisal_{user_id}_{int(time.time())}",
-                    format="pdf"
+                    format="pdf",
+                    options = {
+                        "access_type": "anonymous", 
+                    }
                 )
+                
+                asset_id = upload_result['asset_id']
+                version_id = upload_result['version_id']
+                url = cloudinary.utils.download_backedup_asset(asset_id, version_id)
+                print(f"Cloudinary URL: {url}")
                 # Print Cloudinary URL to terminal
                 print(f"Cloudinary Secure URL: {upload_result['secure_url']}")
                 
