@@ -6,7 +6,6 @@ import bcrypt
 from dotenv import load_dotenv
 from mail import send_username_password_mail
 from flask_cors import CORS  # Add this import
-from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
