@@ -75,8 +75,13 @@ def add_user():
 
     if not data or not all(k in data for k in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
+    
+    if "desg" not in data:
+        data["desg"] = "Faculty"
+        
 
     try:
+        #status, Final total marks
         # Insert into users collection
         db_users.insert_one(data)
 
@@ -125,6 +130,9 @@ def update_user(user_id):
     data = request.json
     allowed_fields = ["name", "role", "dept", "mail", "mob"]
     updated_data = {k: v for k, v in data.items() if k in allowed_fields}
+    
+    if "desg" not in data:
+       data["desg"] = "Faculty"
 
     if not updated_data:
         return jsonify({"error": "No valid fields to update"}), 400
@@ -427,7 +435,7 @@ def fill_template_document(data, user_id, department):
         # Initial placeholders with user details
         placeholders = {
             '{faculty_name}': user_data.get('name', ''),
-            '{faculty_designation}': user_data.get('role', ''),
+            '{faculty_designation}': user_data.get('desg', ''),
             '{faculty_department}': user_data.get('dept', ''),
         }
         
