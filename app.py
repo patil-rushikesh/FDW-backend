@@ -78,10 +78,12 @@ def add_user():
     
     if "desg" not in data:
         data["desg"] = "Faculty"
-        
+
+    # Add new default fields
+    data["isInVerificationPanel"] = False
+    data["facultyToVerify"] = {}
 
     try:
-        #status, Final total marks
         # Insert into users collection
         db_users.insert_one(data)
 
@@ -97,11 +99,25 @@ def add_user():
         collection = department_collections.get(department)
 
         if collection is not None:
+            # Update lookup document
             collection.update_one(
                 {"_id": "lookup"},
                 {"$set": {f"data.{data['_id']}": data["role"]}},
                 upsert=True
             )
+
+            # Create empty document for the user
+            empty_doc = {
+                "_id": data["_id"],
+                "status": "pending",
+                "isUpdated": False,
+                "grand_total": 0,
+                "A": {},
+                "B": {},
+                "C": {},
+                "D": {}
+            }
+            collection.insert_one(empty_doc)
 
             return jsonify({"message": f"User added successfully to {department}"}), 201
         else:
@@ -1097,6 +1113,8 @@ def verify_authority(department, user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
 
 if __name__ == '__main__':
     app.run(debug=True)
