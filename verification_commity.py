@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request
 from flask_pymongo import PyMongo
 import os
 from dotenv import load_dotenv
+from flask import Blueprint
 
 # Load environment variables
 load_dotenv()
@@ -31,99 +32,108 @@ department_collections = {
     "Mechanical": mongo_fdw.db.Mechanical
 }
 
-@app.route('/<department>/verification-committee', methods=['POST'])
-def create_verification_committee(department):
-    """
-    Create or update verification committee structure with empty faculty lists
-    Expected JSON body:
-    {
-        "committee_ids": ["id1", "id2", ...]  # List of committee head IDs
-    }
-    """
-    try:
-        # Validate department
-        collection = department_collections.get(department)
-        if collection is None:
-            return jsonify({"error": "Invalid department"}), 400
+from flask import Blueprint, jsonify, request
 
-        # Get request data
-        data = request.get_json()
-        if not data or 'committee_ids' not in data:
-            return jsonify({"error": "Missing committee head IDs"}), 400
+def create_verification_blueprint(mongo_fdw, db_users, department_collections):
+    verification_bp = Blueprint('verification', __name__)
 
-        committee_ids = data['committee_ids']
-        committee_data = {}
+    @verification_bp.route('/<department>/verification-committee', methods=['POST'])
+    def create_verification_committee(department):
+        """Create or update verification committee structure with empty faculty lists"""
+        try:
+            collection = department_collections.get(department)
+            if collection is None:
+                return jsonify({"error": "Invalid department"}), 400
 
-        # Get committee heads details and create structure
-        for committee_id in committee_ids:
-            head = db_users.find_one({"_id": committee_id})
-            if not head:
-                return jsonify({"error": f"Committee head {committee_id} not found"}), 404
-            
-            committee_key = f"{head['_id']} ({head['name']})"
-            committee_data[committee_key] = []
+            data = request.get_json()
+            if not data or 'committee_ids' not in data:
+                return jsonify({"error": "Missing committee head IDs"}), 400
 
-        # Update or create verification_team document
-        result = collection.update_one(
-            {"_id": "verification_team"},
-            {"$set": committee_data},
-            upsert=True
-        )
+            committee_ids = data['committee_ids']
+            committee_data = {}
 
-        if result.modified_count > 0 or result.upserted_id:
+            for committee_id in committee_ids:
+                head = db_users.find_one({"_id": committee_id})
+                if not head:
+                    return jsonify({"error": f"Committee head {committee_id} not found"}), 404
+                
+                committee_key = f"{head['_id']} ({head['name']})"
+                committee_data[committee_key] = []
+
+            result = collection.update_one(
+                {"_id": "verification_team"},
+                {"$set": committee_data},
+                upsert=True
+            )
+
+            if result.modified_count > 0 or result.upserted_id:
+                return jsonify({
+                    "message": "Verification committee created successfully",
+                    "department": department,
+                    "committee_structure": committee_data
+                }), 200
+            else:
+                return jsonify({"error": "No changes made"}), 400
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @verification_bp.route('/<department>/verification-committee/addfaculties', methods=['POST'])
+    def add_faculty_to_committee(department):
+        """Add faculty members to committees"""
+        try:
+            collection = department_collections.get(department)
+            if collection is None:
+                return jsonify({"error": "Invalid department"}), 400
+
+            data = request.get_json()
+            if not data:
+                return jsonify({"error": "Missing faculty assignments"}), 400
+
+            existing_doc = collection.find_one({"_id": "verification_team"})
+            if not existing_doc:
+                return jsonify({"error": "Verification team not found"}), 404
+
+            result = collection.update_one(
+                {"_id": "verification_team"},
+                {"$set": data}
+            )
+
+            if result.modified_count > 0:
+                return jsonify({
+                    "message": "Faculty members assigned successfully",
+                    "assignments": data
+                }), 200
+            else:
+                return jsonify({"error": "No changes made"}), 400
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @verification_bp.route('/<department>/verification-committee', methods=['GET'])
+    def get_verification_committee(department):
+        """Get verification committee details"""
+        try:
+            collection = department_collections.get(department)
+            if collection is None:
+                return jsonify({"error": "Invalid department"}), 400
+
+            committee = collection.find_one({"_id": "verification_team"})
+            if not committee:
+                return jsonify({"error": "No verification committee found"}), 404
+
+            committee.pop('_id', None)
             return jsonify({
-                "message": "Verification committee created successfully",
                 "department": department,
-                "committee_structure": committee_data
+                "committees": committee
             }), 200
-        else:
-            return jsonify({"error": "No changes made"}), 400
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
 
-@app.route('/<department>/verification-committee/addfaculties', methods=['POST'])
-def add_faculty_to_committee(department):
-    """
-    Add faculty members to specific committees
-    Expected JSON body:
-    {
-        "23TCOMP0123 (Aviraj Kale)": ["23TCOMP2202"],
-        "23TCOMP0129 (Harshad Karale)": [],
-        "23TCOMP0133 (Ashirwad Katkamwar)": [],
-        "23TCOMP0255 (Sujit Shaha)": ["23TCOMP0137"]
-    }
-    """
-    try:
-        collection = department_collections.get(department)
-        if collection is None:
-            return jsonify({"error": "Invalid department"}), 400
+    return verification_bp
 
-        data = request.get_json()
-        if not data:
-            return jsonify({"error": "Missing faculty assignments"}), 400
-
-        # Get existing verification team document
-        existing_doc = collection.find_one({"_id": "verification_team"})
-        if not existing_doc:
-            return jsonify({"error": "Verification team not found"}), 404
-
-        # Update faculty lists for all committees
-        result = collection.update_one(
-            {"_id": "verification_team"},
-            {"$set": data}
-        )
-
-        if result.modified_count > 0:
-            return jsonify({
-                "message": "Faculty members assigned successfully",
-                "assignments": data
-            }), 200
-        else:
-            return jsonify({"error": "No changes made"}), 400
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+app.register_blueprint(create_verification_blueprint(mongo_fdw, db_users, department_collections))
 
 @app.route('/<department>/verification-committee/faculty', methods=['DELETE'])
 def remove_faculty_from_committee(department):
