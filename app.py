@@ -14,10 +14,6 @@ import json
 import requests
 from docx import Document
 from werkzeug.utils import secure_filename
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
-# Add these imports at the top
 from gridfs import GridFS
 from bson.objectid import ObjectId
 
@@ -667,14 +663,6 @@ def generate_filled_document(department, user_id):
 from docx2pdf import convert
 import tempfile
 
-import cloudinary
-import cloudinary.uploader
-# Add after app initialization
-cloudinary.config(
-    cloud_name="dfbuztt4g",  # Add your cloud name
-    api_key="768753868147243",
-    api_secret="BD0XqxX5uuEis4JdmvsJerqEArA"    # Add your API secret
-)
 
 @app.route('/<department>/<user_id>/generate-doc/<format>', methods=['GET'])
 def generate_document(department, user_id, format):
@@ -866,6 +854,7 @@ def get_stored_document(department, user_id, format):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
+    
+    
 if __name__ == '__main__':
     app.run(debug=True)
