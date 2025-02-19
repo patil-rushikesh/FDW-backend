@@ -18,6 +18,8 @@ from gridfs import GridFS
 from bson.objectid import ObjectId
 # Add this import at the top\
 from verification_commity import create_verification_blueprint
+# Add this import at the top
+from faculty_list import faculty_list
 
 
 # Load environment variables
@@ -983,6 +985,8 @@ def get_stored_document(department, user_id, format):
 # Add after your app initialization and before running the app
 verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_collections)
 app.register_blueprint(verification_bp)
+# Add this line after creating the Flask app
+app.register_blueprint(faculty_list)
 
 
 # Add these status change endpoints after your existing routes
