@@ -122,7 +122,8 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
                     if faculty:
                         faculty_data.append({
                             "_id": faculty_id,
-                            "name": faculty.get("name", "Unknown")
+                            "name": faculty.get("name", "Unknown"),
+                            "isApproved": False
                         })
 
                 # Update committee head's facultyToVerify

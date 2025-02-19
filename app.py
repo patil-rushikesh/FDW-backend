@@ -1042,8 +1042,8 @@ def submit_form(department, user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/<department>/<user_id>/verify-research', methods=['POST'])
-def verify_research(department, user_id):
+@app.route('/<department>/<verifier_id>/<user_id>/verify-research', methods=['POST'])
+def verify_research(department,verifier_id, user_id):
     """Changes status from 'verification_pending' to 'authority_verification_pending'"""
     try:
         collection = department_collections.get(department)
@@ -1067,11 +1067,37 @@ def verify_research(department, user_id):
             {"_id": user_id},
             {"$set": {"status": "authority_verification_pending"}}
         )
+        
+        committee_head = db_users.find_one({"_id": verifier_id})
+        if not committee_head:
+            return jsonify({"error": "Committee head not found"}), 404
+
+        # Check if the user is in verification panel
+        if not committee_head.get("isInVerificationPanel", False):
+            return jsonify({"error": "User is not authorized to approve"}), 403
+
+        # Update the isApproved status in facultyToVerify array
+        result_isVerified = db_users.update_one(
+            {
+                "_id": verifier_id,
+                f"facultyToVerify.{department}._id": user_id
+            },
+            {
+                "$set": {
+                    f"facultyToVerify.{department}.$.isApproved": True
+                }
+            }
+        )
+        if result_isVerified.modified_count <= 0:
+            return jsonify({"error": "Faculty not found or already approved"}), 400
 
         if result.modified_count > 0:
             return jsonify({
                 "message": "Research verification completed",
-                "new_status": "authority_verification_pending"
+                "new_status": "authority_verification_pending",
+                "department": department,
+                "faculty_id": user_id,
+                "verifier_id": verifier_id
             }), 200
         return jsonify({"error": "No changes made"}), 400
 
@@ -1103,7 +1129,6 @@ def verify_authority(department, user_id):
             {"_id": user_id},
             {"$set": {"status": "verified"}}
         )
-
         if result.modified_count > 0:
             return jsonify({
                 "message": "Authority verification completed",
