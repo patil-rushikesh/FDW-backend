@@ -20,6 +20,8 @@ import cloudinary.api
 # Add these imports at the top
 from gridfs import GridFS
 from bson.objectid import ObjectId
+# Add this import at the top\
+from verification_commity import create_verification_blueprint
 
 
 # Load environment variables
@@ -860,6 +862,13 @@ def get_stored_document(department, user_id, format):
         
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# Add after your app initialization and before running the app
+verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_collections)
+app.register_blueprint(verification_bp)
+
+# Keep your existing routes...
 
 if __name__ == '__main__':
     app.run(debug=True)
