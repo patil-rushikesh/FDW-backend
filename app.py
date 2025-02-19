@@ -207,6 +207,41 @@ def login():
 
 
 #Section Data Adding Start here
+def calculate_grand_total(data):
+    """Calculate grand total from all sections and determine status"""
+    try:
+        grand_total = 0
+        form_status = "pending"  # Default status
+
+        # Add Section A total if exists
+        if 'A' in data and 'total_marks' in data['A']:
+            grand_total += float(data['A']['total_marks'])
+
+        # Add Section B total if exists
+        if 'B' in data and 'total_marks' in data['B']:
+            grand_total += float(data['B']['total_marks'])
+
+        # Add Section C total if exists
+        if 'C' in data and 'total_marks' in data['C']:
+            grand_total += float(data['C']['total_marks'])
+
+        # Add Section D total if exists
+        if 'D' in data and 'total_marks' in data['D']:
+            grand_total += float(data['D']['total_marks'])
+
+        return {
+            'grand_total': round(grand_total, 2),
+            'status': form_status
+        }
+
+    except Exception as e:
+        print(f"Error calculating grand total: {str(e)}")
+        return {
+            'grand_total': 0,
+            'status': "error"
+        }
+
+# Modify section handlers to update grand total
 @app.route('/<department>/<user_id>/A', methods=['POST'])
 def handle_post_A(department, user_id):
     try:
@@ -214,17 +249,12 @@ def handle_post_A(department, user_id):
         if not data:
             return jsonify({"error": "Invalid JSON data"}), 400
         
-        # Access the collection named after the department
         collection = department_collections.get(department)
-        
-        #first we have to verify from lookup that the user exist in that department or not then only add data
-        
         
         if collection is None:
             return jsonify({"error": "Invalid department"}), 400
         
         lookup = collection.find_one({"_id": "lookup"}).get("data")
-        print(lookup)
         if lookup is None:
             return jsonify({"error": "Invalid department"}), 400
         user = lookup.get(user_id)
@@ -234,19 +264,38 @@ def handle_post_A(department, user_id):
         # Update the document for the given user_id
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"A": data, 
-                      "isUpdated": True  # Set flag when data is updated
-               }},
+            {"$set": {
+                "A": data,
+                "isUpdated": True,
+                "status": "pending"  # Set initial status
+            }},
             upsert=True
         )
-        
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        calculated_data = calculate_grand_total(updated_doc)
+
+        # Update grand total and status
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "grand_total": calculated_data['grand_total'],
+                "status": calculated_data['status']
+            }}
+        )
+
         if result.matched_count > 0:
             message = "Data updated successfully"
         else:
             message = "Data inserted successfully"
-        
-        return jsonify({"message": message}), 200
-    
+
+        return jsonify({
+            "message": message,
+            "grand_total": calculated_data['grand_total'],
+            "status": calculated_data['status']
+        }), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -297,13 +346,26 @@ def handle_post_B(department, user_id):
                }},
             upsert=True
         )
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        grand_total = calculate_grand_total(updated_doc)
+
+        # Update grand total
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {"grand_total": grand_total}}
+        )
         
         if result.matched_count > 0:
             message = "Data updated successfully"
         else:
             message = "Data inserted successfully"
         
-        return jsonify({"message": message}), 200
+        return jsonify({
+            "message": message,
+            "grand_total": grand_total
+        }), 200
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -353,13 +415,26 @@ def handle_post_C(department, user_id):
                }},
             upsert=True
         )
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        grand_total = calculate_grand_total(updated_doc)
+
+        # Update grand total
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {"grand_total": grand_total}}
+        )
         
         if result.matched_count > 0:
             message = "Data updated successfully"
         else:
             message = "Data inserted successfully"
         
-        return jsonify({"message": message}), 200
+        return jsonify({
+            "message": message,
+            "grand_total": grand_total
+        }), 200
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -409,13 +484,26 @@ def handle_post_D(department, user_id):
                }},
             upsert=True
         )
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        grand_total = calculate_grand_total(updated_doc)
+
+        # Update grand total
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {"grand_total": grand_total}}
+        )
         
         if result.matched_count > 0:
             message = "Data updated successfully"
         else:
             message = "Data inserted successfully"
         
-        return jsonify({"message": message}), 200
+        return jsonify({
+            "message": message,
+            "grand_total": grand_total
+        }), 200
     
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -429,6 +517,47 @@ def get_section_D(department, user_id):
             if user:
                 return jsonify(user.get("D"))
             return jsonify({"error": "User not found"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/total', methods=['GET'])
+def get_grand_total(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        grand_total = calculate_grand_total(user_doc)
+        
+        return jsonify({
+            "user_id": user_id,
+            "grand_total": grand_total
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+@app.route('/<department>/<user_id>/status', methods=['GET'])
+def get_form_status(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        status = user_doc.get('status', 'pending')
+        return jsonify({
+            "user_id": user_id,
+            "status": status
+        }), 200
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
@@ -869,6 +998,115 @@ verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_
 app.register_blueprint(verification_bp)
 
 # Keep your existing routes...
+
+# Add these status change endpoints after your existing routes
+@app.route('/<department>/<user_id>/submit-form', methods=['POST'])
+def submit_form(department, user_id):
+    """Changes status from 'pending' to 'verification_pending' when form is submitted"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status', 'pending')
+        if current_status != 'pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in pending status to submit"
+            }), 400
+
+        # Update status
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"status": "verification_pending"}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "Form submitted successfully",
+                "new_status": "verification_pending"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/verify-research', methods=['POST'])
+def verify_research(department, user_id):
+    """Changes status from 'verification_pending' to 'authority_verification_pending'"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status')
+        if current_status != 'verification_pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in verification_pending status"
+            }), 400
+
+        # Update status
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"status": "authority_verification_pending"}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "Research verification completed",
+                "new_status": "authority_verification_pending"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/verify-authority', methods=['POST'])
+def verify_authority(department, user_id):
+    """Changes status from 'authority_verification_pending' to 'verified'"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status')
+        if current_status != 'authority_verification_pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in authority_verification_pending status"
+            }), 400
+
+        # Update status
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"status": "verified"}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "Authority verification completed",
+                "new_status": "verified"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
