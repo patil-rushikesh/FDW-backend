@@ -228,7 +228,9 @@ def handle_post_A(department, user_id):
         # Update the document for the given user_id
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"A": data}},
+            {"$set": {"A": data, 
+                      "isUpdated": True  # Set flag when data is updated
+               }},
             upsert=True
         )
         
@@ -284,7 +286,9 @@ def handle_post_B(department, user_id):
         # Update the document for the given user_id
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"B": data}},
+            {"$set": {"B": data, 
+                      "isUpdated": True  # Set flag when data is updated
+               }},
             upsert=True
         )
         
@@ -338,7 +342,9 @@ def handle_post_C(department, user_id):
         # Update the document for the given user_id
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"C": data}},
+            {"$set": {"C": data, 
+                      "isUpdated": True  # Set flag when data is updated
+               }},
             upsert=True
         )
         
@@ -392,7 +398,9 @@ def handle_post_D(department, user_id):
         # Update the document for the given user_id
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"D": data}},
+            {"$set": {"D": data, 
+                      "isUpdated": True  # Set flag when data is updated
+               }},
             upsert=True
         )
         
@@ -609,73 +617,65 @@ def fill_template_document(data, user_id, department):
     except Exception as e:
         raise Exception(f"Error in fill_template_document: {str(e)}")
 
-@app.route('/<department>/<user_id>/generate-doc', methods=['GET'])
-def generate_filled_document(department, user_id):
-    output_path = None
-    try:
-        # Get the department collection
-        collection = department_collections.get(department)
-        if collection is None:
-            return jsonify({"error": "Invalid department"}), 400
+# @app.route('/<department>/<user_id>/generate-doc', methods=['GET'])
+# def generate_filled_document(department, user_id):
+#     output_path = None
+#     try:
+#         # Get the department collection
+#         collection = department_collections.get(department)
+#         if collection is None:
+#             return jsonify({"error": "Invalid department"}), 400
 
-        # Get user data directly from MongoDB
-        user_doc = collection.find_one({"_id": user_id})
-        if not user_doc:
-            return jsonify({"error": "User data not found"}), 404
+#         # Get user data directly from MongoDB
+#         user_doc = collection.find_one({"_id": user_id})
+#         if not user_doc:
+#             return jsonify({"error": "User data not found"}), 404
 
-        # Create data structure
-        data = {
-            'A': user_doc.get('A', {}),
-            'B': user_doc.get('B', {}),
-            'C': user_doc.get('C', {})
-        }
+#         # Create data structure
+#         data = {
+#             'A': user_doc.get('A', {}),
+#             'B': user_doc.get('B', {}),
+#             'C': user_doc.get('C', {})
+#         }
 
-        # Generate document
-        doc = fill_template_document(data, user_id, department)
+#         # Generate document
+#         doc = fill_template_document(data, user_id, department)
         
-        # Create a safe filename
-        safe_filename = secure_filename(f"filled_appraisal_{user_id}.docx")
+#         # Create a safe filename
+#         safe_filename = secure_filename(f"filled_appraisal_{user_id}.docx")
         
-        # Save to a temporary directory
-        temp_dir = os.path.join(os.getcwd(), 'temp')
-        os.makedirs(temp_dir, exist_ok=True)
-        output_path = os.path.join(temp_dir, safe_filename)
+#         # Save to a temporary directory
+#         temp_dir = os.path.join(os.getcwd(), 'temp')
+#         os.makedirs(temp_dir, exist_ok=True)
+#         output_path = os.path.join(temp_dir, safe_filename)
         
-        # Save the document
-        doc.save(output_path)
+#         # Save the document
+#         doc.save(output_path)
         
-        # Send file
-        return send_file(
-            output_path,
-            as_attachment=True,
-            download_name=safe_filename,
-            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-        )
+#         # Send file
+#         return send_file(
+#             output_path,
+#             as_attachment=True,
+#             download_name=safe_filename,
+#             mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+#         )
         
-    except Exception as e:
-        if output_path and os.path.exists(output_path):
-            try:
-                os.remove(output_path)
-            except:
-                pass
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         if output_path and os.path.exists(output_path):
+#             try:
+#                 os.remove(output_path)
+#             except:
+#                 pass
+#         return jsonify({"error": str(e)}), 500
     
 from docx2pdf import convert
 import tempfile
 
 
-@app.route('/<department>/<user_id>/generate-doc/<format>', methods=['GET'])
+@app.route('/<department>/<user_id>/generate-doc', methods=['GET'])
 def generate_document(department, user_id, format):
-    if format not in ['pdf', 'docx']:
-        return jsonify({"error": "Invalid format. Use 'pdf' or 'docx'"}), 400
         
-    output_path = None
-    temp_docx = None
     try:
-        # Initialize COM for this thread
-        pythoncom.CoInitialize()
-        
-        # Get user data and generate document
         collection = department_collections.get(department)
         if collection is None:
             return jsonify({"error": "Invalid department"}), 400
@@ -684,6 +684,30 @@ def generate_document(department, user_id, format):
         if not user_doc:
             return jsonify({"error": "User data not found"}), 404
 
+        # Check if document needs regeneration
+        is_updated = user_doc.get('isUpdated', True)  # Default to True for backward compatibility
+        existing_pdf = user_doc.get('appraisal_pdf')
+
+        if not is_updated and existing_pdf:
+            # Return existing PDF from GridFS
+            try:
+                file_id = ObjectId(existing_pdf['file_id'])
+                grid_out = fs.get(file_id)
+                
+                return send_file(
+                    io.BytesIO(grid_out.read()),
+                    as_attachment=True,
+                    download_name=existing_pdf['filename'],
+                    mimetype='application/pdf'
+                )
+            except Exception as e:
+                # If there's any error retrieving existing PDF, generate new one
+                pass
+
+        # Initialize COM for PDF generation
+        pythoncom.CoInitialize()
+
+        # Prepare data for document generation
         data = {
             'A': user_doc.get('A', {}),
             'B': user_doc.get('B', {}),
@@ -696,77 +720,47 @@ def generate_document(department, user_id, format):
         temp_dir = os.path.join(os.getcwd(), 'temp')
         os.makedirs(temp_dir, exist_ok=True)
         
-        if format == 'pdf':
-            # Handle PDF generation
-            safe_filename_docx = secure_filename(f"temp_{user_id}.docx")
-            safe_filename = secure_filename(f"filled_appraisal_{user_id}.pdf")
-            temp_docx = os.path.join(temp_dir, safe_filename_docx)
-            output_path = os.path.join(temp_dir, safe_filename)
-            
-            # Save and convert to PDF
-            doc.save(temp_docx)
-            convert(temp_docx, output_path)
-            
-            # Store PDF in GridFS
-            with open(output_path, 'rb') as pdf_file:
-                file_id = fs.put(
-                    pdf_file,
-                    filename=safe_filename,
-                    user_id=user_id,
-                    department=department,
-                    content_type='application/pdf'
-                )
-            
-            # Update user document with file reference
-            collection.update_one(
-                {"_id": user_id},
-                {"$set": {
+        # Generate PDF
+        safe_filename_docx = secure_filename(f"temp_{user_id}.docx")
+        safe_filename = secure_filename(f"filled_appraisal_{user_id}.pdf")
+        temp_docx = os.path.join(temp_dir, safe_filename_docx)
+        output_path = os.path.join(temp_dir, safe_filename)
+        
+        # Save and convert to PDF
+        doc.save(temp_docx)
+        convert(temp_docx, output_path)
+        
+        # Store PDF in GridFS
+        with open(output_path, 'rb') as pdf_file:
+            file_id = fs.put(
+                pdf_file,
+                filename=safe_filename,
+                user_id=user_id,
+                department=department,
+                content_type='application/pdf'
+            )
+        
+        # Update user document with file reference and reset isUpdated flag
+        collection.update_one(
+            {"_id": user_id},
+            {
+                "$set": {
                     "appraisal_pdf": {
                         "file_id": str(file_id),
                         "filename": safe_filename,
                         "upload_date": datetime.now()
-                    }
-                }}
-            )
-            
-            mimetype = 'application/pdf'
-            
-        else:
-            # Handle DOCX generation
-            safe_filename = secure_filename(f"filled_appraisal_{user_id}.docx")
-            output_path = os.path.join(temp_dir, safe_filename)
-            doc.save(output_path)
-            
-            # Store DOCX in GridFS
-            with open(output_path, 'rb') as docx_file:
-                file_id = fs.put(
-                    docx_file,
-                    filename=safe_filename,
-                    user_id=user_id,
-                    department=department,
-                    content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-                )
-            
-            # Update user document with file reference
-            collection.update_one(
-                {"_id": user_id},
-                {"$set": {
-                    "appraisal_docx": {
-                        "file_id": str(file_id),
-                        "filename": safe_filename,
-                        "upload_date": datetime.now()
-                    }
-                }}
-            )
-            
-            mimetype = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-
+                    },
+                    "isUpdated": False  # Reset flag after generating new PDF
+                }
+            }
+        )
+        
         # Send file
         return send_file(
             output_path,
             as_attachment=True,
             download_name=safe_filename,
-            mimetype=mimetype
+            mimetype='application/pdf'
         )
 
     except Exception as e:
