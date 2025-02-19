@@ -57,6 +57,17 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
                 if not head:
                     return jsonify({"error": f"Committee head {committee_id} not found"}), 404
                 
+                # Update the committee head's verification panel status
+                db_users.update_one(
+                    {"_id": committee_id},
+                    {
+                        "$set": {
+                            "isInVerificationPanel": True,
+                            f"facultyToVerify.{department}": []
+                        }
+                    }
+                )
+                
                 committee_key = f"{head['_id']} ({head['name']})"
                 committee_data[committee_key] = []
 
@@ -94,10 +105,36 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
             if not existing_doc:
                 return jsonify({"error": "Verification team not found"}), 404
 
+            # Update verification team document
             result = collection.update_one(
                 {"_id": "verification_team"},
                 {"$set": data}
             )
+
+            # Update committee heads' facultyToVerify lists
+            for committee_key, faculty_list in data.items():
+                committee_id = committee_key.split(" ")[0]  # Extract ID from "ID (Name)"
+                
+                # Get faculty names for the IDs
+                faculty_data = []
+                for faculty_id in faculty_list:
+                    faculty = db_users.find_one({"_id": faculty_id})
+                    if faculty:
+                        faculty_data.append({
+                            "_id": faculty_id,
+                            "name": faculty.get("name", "Unknown"),
+                            "isApproved": False
+                        })
+
+                # Update committee head's facultyToVerify
+                db_users.update_one(
+                    {"_id": committee_id},
+                    {
+                        "$set": {
+                            f"facultyToVerify.{department}": faculty_data
+                        }
+                    }
+                )
 
             if result.modified_count > 0:
                 return jsonify({
@@ -126,6 +163,71 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
             return jsonify({
                 "department": department,
                 "committees": committee
+            }), 200
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @verification_bp.route('/<department>/verification-committee', methods=['DELETE'])
+    def delete_verification_committee(department):
+        """Delete entire verification committee for a department"""
+        try:
+            collection = department_collections.get(department)
+            if collection is None:
+                return jsonify({"error": "Invalid department"}), 400
+
+            # Get current committee members before deletion
+            committee = collection.find_one({"_id": "verification_team"})
+            if committee:
+                # Reset verification panel status for all committee heads
+                for committee_key in committee.keys():
+                    if committee_key != '_id':
+                        committee_id = committee_key.split(" ")[0]
+                        db_users.update_one(
+                            {"_id": committee_id},
+                            {
+                                "$set": {"isInVerificationPanel": False},
+                                "$unset": {f"facultyToVerify.{department}": ""}
+                            }
+                        )
+
+            result = collection.delete_one({"_id": "verification_team"})
+
+            if result.deleted_count > 0:
+                return jsonify({
+                    "message": "Verification committee deleted successfully"
+                }), 200
+            else:
+                return jsonify({"error": "Verification committee not found"}), 404
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    @verification_bp.route('/faculty_to_verify/<verifier_id>', methods=['GET'])
+    def get_assigned_faculties(verifier_id):
+        """
+        Get assigned faculty details for a specific committee head
+        Returns faculty data in the format stored in facultyToVerify
+        """
+        try:
+            # Find the committee head in users collection
+            committee_head = db_users.find_one({"_id": verifier_id})
+            if not committee_head:
+                return jsonify({"error": "Committee head not found"}), 404
+
+            # Check if the user is in verification panel
+            if not committee_head.get("isInVerificationPanel", False):
+                return jsonify({"error": "User is not a committee head"}), 403
+
+            # Get faculty data from facultyToVerify for all departments
+            faculty_data = committee_head.get("facultyToVerify", {})
+
+            return jsonify({
+               
+                    "_id": verifier_id,
+                    "name": committee_head.get("name"),
+                    "assigned_faculties": faculty_data
+                
             }), 200
 
         except Exception as e:
@@ -276,6 +378,9 @@ def get_specific_committee(department, committee_head):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+    
+
 
 if __name__ == '__main__':
     app.run(debug=True)
