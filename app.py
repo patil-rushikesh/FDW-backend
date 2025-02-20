@@ -14,10 +14,6 @@ import json
 import requests
 from docx import Document
 from werkzeug.utils import secure_filename
-import cloudinary
-import cloudinary.uploader
-import cloudinary.api
-# Add these imports at the top
 from gridfs import GridFS
 from bson.objectid import ObjectId
 # Add this import at the top\
@@ -602,7 +598,7 @@ def fill_template_document(data, user_id, department):
 
         # Placeholders and their corresponding values from different sections
         placeholders.update({
-            # Section A placeholders (keeping these as they were)
+            # Section A placeholders
             '{result_analysis_marks}': str(round(data['A']['1']['total_marks'], 2)),
             '{course_outcome_marks}': str(round(data['A']['2']['total_marks'], 2)),
             '{elearning_content_marks}': str(round(data['A']['3']['total_marks'], 2)),
@@ -611,146 +607,212 @@ def fill_template_document(data, user_id, department):
             '{projects_guided_marks}': str(round(data['A']['6']['total_marks'], 2)),
             '{student_feedback_marks}': str(round(data['A']['7']['total_marks'], 2)),
             '{ptg_meetings_marks}': str(round(data['A']['8']['total_marks'], 2)),
-            '{section_a_total}': str(round(data['A']['9']['total'], 2)),
+            '{section_a_total}': str(round(data['A']['total_marks'], 2)),
             
-            # Section B detailed placeholders
-            # 1. Papers Published
-            # '{sci_papers_count}': str(data['B']['papers']['sci']['count']),
-            '{sci_papers_marks}': str(data['B']['papers']['sci']['count'] * 100),
-            # '{esci_papers_count}': str(data['B']['papers']['esci']['count']),
-            '{esci_papers_marks}': str(data['B']['papers']['esci']['count'] * 50),
-            # '{scopus_papers_count}': str(data['B']['papers']['scopus']['count']),
-            '{scopus_papers_marks}': str(data['B']['papers']['scopus']['count'] * 50),
-            # '{ugc_papers_count}': str(data['B']['papers']['ugc']['count']),
-            '{ugc_papers_marks}': str(data['B']['papers']['ugc']['count'] * 10),
-            # '{other_papers_count}': str(data['B']['papers']['other']['count']),
-            '{other_papers_marks}': str(data['B']['papers']['other']['count'] * 5),
-            '{papers_published_marks}': str(data['B']['papers']['marks']),
+            # Section B detailed placeholders - Updated to include verification marks
+            # 1. Journal Papers
+            
+            '{sci_papers_marks}': str(data['B']['1']['journalPapers']['sciCount'] * 100),
+            '{sci_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_sciMarks']),
+            
+            '{esci_papers_marks}': str(data['B']['1']['journalPapers']['esciCount'] * 50),
+            '{esci_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_esciMarks']),
+            
+            '{scopus_papers_marks}': str(data['B']['1']['journalPapers']['scopusCount'] * 50),
+            '{scopus_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_scopusMarks']),
+            
+            '{ugc_papers_marks}': str(data['B']['1']['journalPapers']['ugcCareCount'] * 10),
+            '{ugc_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_ugcCareMarks']),
+            
+            '{other_papers_marks}': str(data['B']['1']['journalPapers']['otherCount'] * 5),
+            '{other_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_otherMarks']),
+            '{papers_published_marks}': str(data['B']['1']['journalPapers']['verified_marks']),
             
             # 2. Conferences
-            # '{scopus_conf_count}': str(data['B']['conferences']['scopus']['count']),
-            '{scopus_conf_marks}': str(data['B']['conferences']['scopus']['count'] * 30),
-            # '{other_conf_count}': str(data['B']['conferences']['other']['count']),
-            '{other_conf_marks}': str(data['B']['conferences']['other']['count'] * 5),
-            '{conferences_marks}': str(data['B']['conferences']['marks']),
+            
+            '{scopus_conf_marks}': str(data['B']['2']['conferencePapers']['scopusWosCount'] * 30),
+            '{scopus_conf_verified_marks}': str(data['B']['2']['conferencePapers']['ver_scopusWosMarks']),
+            
+            '{other_conf_marks}': str(data['B']['2']['conferencePapers']['otherCount'] * 5),
+            '{other_conf_verified_marks}': str(data['B']['2']['conferencePapers']['ver_otherMarks']),
+            '{conferences_marks}': str(data['B']['2']['conferencePapers']['verified_marks']),
             
             # 3. Book Chapters
-            # '{scopus_chapter_count}': str(data['B']['bookChapters']['scopus']['count']),
-            '{scopus_chapter_marks}': str(data['B']['bookChapters']['scopus']['count'] * 30),
-            # '{other_chapter_count}': str(data['B']['bookChapters']['other']['count']),
-            '{other_chapter_marks}': str(data['B']['bookChapters']['other']['count'] * 5),
-            '{book_chapters_marks}': str(data['B']['bookChapters']['marks']),
+            
+            '{scopus_chapter_marks}': str(data['B']['3']['bookChapters']['scopusWosCount'] * 30),
+            '{scopus_chapter_verified_marks}': str(data['B']['3']['bookChapters']['ver_scopusWosMarks']),
+            
+            '{other_chapter_marks}': str(data['B']['3']['bookChapters']['otherCount'] * 5),
+            '{other_chapter_verified_marks}': str(data['B']['3']['bookChapters']['ver_otherMarks']),
+            '{book_chapters_marks}': str(data['B']['3']['bookChapters']['verified_marks']),
             
             # 4. Books
-            # '{scopus_books_count}': str(data['B']['books']['scopus']['count']),
-            '{scopus_books_marks}': str(data['B']['books']['scopus']['count'] * 100),
-            # '{national_books_count}': str(data['B']['books']['national']['count']),
-            '{national_books_marks}': str(data['B']['books']['national']['count'] * 30),
-            # '{local_books_count}': str(data['B']['books']['local']['count']),
-            '{local_books_marks}': str(data['B']['books']['local']['count'] * 10),
-            '{books_marks}': str(data['B']['books']['marks']),
+            
+            '{scopus_books_marks}': str(data['B']['4']['books']['scopusWosCount'] * 100),
+            '{scopus_books_verified_marks}': str(data['B']['4']['books']['ver_scopusWosMarks']),
+            
+            '{national_books_marks}': str(data['B']['4']['books']['nonIndexedCount'] * 30),
+            '{national_books_verified_marks}': str(data['B']['4']['books']['ver_nonIndexedMarks']),
+            
+            '{local_books_marks}': str(data['B']['4']['books']['localCount'] * 10),
+            '{local_books_verified_marks}': str(data['B']['4']['books']['ver_localMarks']),
+            '{books_marks}': str(data['B']['4']['books']['verified_marks']),
             
             # 5. Citations
-            # '{wos_citations_count}': str(data['B']['citations']['wos']['count']),
-            '{wos_citations_marks}': str(data['B']['citations']['wos']['count'] // 3 * 3),
-            # '{scopus_citations_count}': str(data['B']['citations']['scopus']['count']),
-            '{scopus_citations_marks}': str(data['B']['citations']['scopus']['count'] // 3 * 3),
-            # '{google_citations_count}': str(data['B']['citations']['google']['count']),
-            '{google_citations_marks}': str(data['B']['citations']['google']['count'] // 3 * 1),
-            '{citations_marks}': str(data['B']['citations']['marks']),
             
-            # 6. Patents
-            # '{individual_commercialized_count}': str(data['B']['patents']['individualCommercialized']['count']),
-            '{individual_commercialized_marks}': str(data['B']['patents']['individualCommercialized']['count'] * 20),
-            # '{individual_granted_count}': str(data['B']['patents']['individualGranted']['count']),
-            '{individual_granted_marks}': str(data['B']['patents']['individualGranted']['count'] * 15),
-            # '{college_commercialized_count}': str(data['B']['patents']['collegeCommercialized']['count']),
-            '{college_commercialized_marks}': str(data['B']['patents']['collegeCommercialized']['count'] * 100),
-            # '{college_granted_count}': str(data['B']['patents']['collegeGranted']['count']),
-            '{college_granted_marks}': str(data['B']['patents']['collegeGranted']['count'] * 30),
-            '{patents_marks}': str(data['B']['patents']['marks']),
+            '{wos_citations_marks}': str(Math.floor(data['B']['5']['citations']['webOfScienceCount'] / 3) * 3),
+            '{wos_citations_verified_marks}': str(data['B']['5']['citations']['ver_webOfScienceMarks']),
             
-            # 7. Training Revenue
-            '{training_amount}': str(data['B']['training']['revenue']['amount']),
-            '{training_marks}': str(data['B']['training']['marks']),
+            '{scopus_citations_marks}': str(Math.floor(data['B']['5']['citations']['scopusCount'] / 3) * 3),
+            '{scopus_citations_verified_marks}': str(data['B']['5']['citations']['ver_scopusMarks']),
             
-            # 8. Non-Research Grants
-            '{nonresearch_grants_amount}': str(data['B']['nonResearchGrants']['amount']['value']),
-            '{nonresearch_grants_marks}': str(data['B']['nonResearchGrants']['marks']),
+            '{google_citations_marks}': str(Math.floor(data['B']['5']['citations']['googleScholarCount'] / 3) * 1),
+            '{google_citations_verified_marks}': str(data['B']['5']['citations']['ver_googleScholarMarks']),
+            '{citations_marks}': str(data['B']['5']['citations']['verified_marks']),
             
-            # 9. Products
-            # '{commercialized_products_count}': str(data['B']['products']['commercialized']['count']),
-            '{commercialized_products_marks}': str(data['B']['products']['commercialized']['count'] * 100),
-            # '{developed_products_count}': str(data['B']['products']['developed']['count']),
-            '{developed_products_marks}': str(data['B']['products']['developed']['count'] * 40),
-            # '{poc_products_count}': str(data['B']['products']['poc']['count']),
-            '{poc_products_marks}': str(data['B']['products']['poc']['count'] * 10),
-            '{products_marks}': str(data['B']['products']['marks']),
+            # 6. Copyright Individual
             
-            # 10. Awards
-            # '{international_awards_count}': str(data['B']['awards']['international']['count']),
-            '{international_awards_marks}': str(data['B']['awards']['international']['count'] * 30),
-            # '{government_awards_count}': str(data['B']['awards']['government']['count']),
-            '{government_awards_marks}': str(data['B']['awards']['government']['count'] * 20),
-            # '{national_awards_count}': str(data['B']['awards']['national']['count']),
-            '{national_awards_marks}': str(data['B']['awards']['national']['count'] * 5),
-            # '{international_fellowship_count}': str(data['B']['awards']['internationalFellowship']['count']),
-            '{international_fellowship_marks}': str(data['B']['awards']['internationalFellowship']['count'] * 50),
-            # '{national_fellowship_count}': str(data['B']['awards']['nationalFellowship']['count']),
-            '{national_fellowship_marks}': str(data['B']['awards']['nationalFellowship']['count'] * 30),
-            '{awards_marks}': str(data['B']['awards']['marks']),
+            '{individual_copyright_registered_marks}': str(data['B']['6']['copyrightIndividual']['registeredCount'] * 20),
+            '{individual_copyright_registered_verified_marks}': str(data['B']['6']['copyrightIndividual']['ver_registeredMarks']),
             
-            # 11. Grants and Revenue
-            # '{research_grants_amount}': str(data['B']['grantsAndRevenue']['researchGrants']['amount']),
-            '{research_grants_marks}': str(data['B']['grantsAndRevenue']['researchGrants']['amount'] // 200000 * 10),
-            # '{consultancy_revenue_amount}': str(data['B']['grantsAndRevenue']['consultancyRevenue']['amount']),
-            '{consultancy_revenue_marks}': '0',  # Calculate based on specific formula if needed
-            # '{patent_revenue_amount}': str(data['B']['grantsAndRevenue']['patentCommercialRevenue']['amount']),
-            '{patent_revenue_marks}': '0',  # Calculate based on specific formula if needed
-            # '{product_revenue_amount}': str(data['B']['grantsAndRevenue']['productCommercialRevenue']['amount']),
-            '{product_revenue_marks}': '0',  # Calculate based on specific formula if needed
-            # '{startup_revenue_amount}': str(data['B']['grantsAndRevenue']['startupRevenue']['amount']),
-            '{startup_revenue_marks}': '0',  # Calculate based on specific formula if needed
-            # '{startup_funding_amount}': str(data['B']['grantsAndRevenue']['startupFunding']['amount']),
-            '{startup_funding_marks}': '0',  # Calculate based on specific formula if needed
-            '{grants_revenue_marks}': str(data['B']['grantsAndRevenue']['marks']),
+            '{individual_copyright_granted_marks}': str(data['B']['6']['copyrightIndividual']['grantedCount'] * 50),
+            '{individual_copyright_granted_verified_marks}': str(data['B']['6']['copyrightIndividual']['ver_grantedMarks']),
+            '{individual_copyright_marks}': str(data['B']['6']['copyrightIndividual']['verified_marks']),
             
-            # 12. Startup PCCOE
-            # '{startup_revenue_pccoe_amount}': str(data['B']['startupPCCOE']['revenue']['amount']),
-            '{startup_revenue_pccoe_marks}': '0',  # Calculate if amount > 50000: 100 marks
-            # '{startup_funding_pccoe_amount}': str(data['B']['startupPCCOE']['funding']['amount']),
-            '{startup_funding_pccoe_marks}': '0',  # Calculate if amount > 500000: 100 marks
-            # '{startup_products_count}': str(data['B']['startupPCCOE']['products']['count']),
-            '{startup_products_marks}': str(data['B']['startupPCCOE']['products']['count'] * 40),
-            # '{startup_poc_count}': str(data['B']['startupPCCOE']['poc']['count']),
-            '{startup_poc_marks}': str(data['B']['startupPCCOE']['poc']['count'] * 10),
-            # '{startup_registered_count}': str(data['B']['startupPCCOE']['registered']['count']),
-            '{startup_registered_marks}': str(data['B']['startupPCCOE']['registered']['count'] * 5),
-            '{startup_pccoe_marks}': str(data['B']['startupPCCOE']['marks']),
+            # 7. Copyright Institute
             
-            # 13. Industry Interaction
-            # '{active_mou_count}': str(data['B']['industryInteraction']['activeMOU']['count']),
-            '{active_mou_marks}': str(data['B']['industryInteraction']['activeMOU']['count'] * 10),
-            # '{lab_development_count}': str(data['B']['industryInteraction']['labDevelopment']['count']),
-            '{lab_development_marks}': str(data['B']['industryInteraction']['labDevelopment']['count'] * 20),
-            '{industry_interaction_marks}': str(data['B']['industryInteraction']['marks']),
+            '{institute_copyright_registered_marks}': str(data['B']['7']['copyrightInstitute']['registeredCount'] * 40),
+            '{institute_copyright_registered_verified_marks}': str(data['B']['7']['copyrightInstitute']['ver_registeredMarks']),
             
-            # 14. Industry Association
-            # '{internships_placements_count}': str(data['B']['industryAssociation']['internshipsAndPlacements']['count']),
-            '{internships_placements_marks}': str(data['B']['industryAssociation']['internshipsAndPlacements']['count'] * 10),
-            '{industry_association_marks}': str(data['B']['industryAssociation']['marks']),
+            '{institute_copyright_granted_marks}': str(data['B']['7']['copyrightInstitute']['grantedCount'] * 100),
+            '{institute_copyright_granted_verified_marks}': str(data['B']['7']['copyrightInstitute']['ver_grantedMarks']),
+            '{institute_copyright_marks}': str(data['B']['7']['copyrightInstitute']['verified_marks']),
+            
+            # 8-9. Patents (Individual and Institute)
+            
+            '{individual_patent_registered_marks}': str(data['B']['8']['patentIndividual']['registeredCount'] * 20),
+            '{individual_patent_registered_verified_marks}': str(data['B']['8']['patentIndividual']['ver_registeredMarks']),
+            
+            '{individual_patent_published_marks}': str(data['B']['8']['patentIndividual']['publishedCount'] * 30),
+            '{individual_patent_published_verified_marks}': str(data['B']['8']['patentIndividual']['ver_publishedMarks']),
+            
+            '{individual_granted_marks}': str(data['B']['8']['patentIndividual']['grantedCount'] * 50),
+            '{individual_granted_verified_marks}': str(data['B']['8']['patentIndividual']['ver_grantedMarks']),
+            
+            '{individual_commercialized_marks}': str(data['B']['8']['patentIndividual']['commercializedCount'] * 100),
+            '{individual_commercialized_verified_marks}': str(data['B']['8']['patentIndividual']['ver_commercializedMarks']),
+            '{individual_patent_marks}': str(data['B']['8']['patentIndividual']['verified_marks']),
+            
+            
+            '{college_patent_registered_marks}': str(data['B']['9']['patentInstitute']['registeredCount'] * 40),
+            '{college_patent_registered_verified_marks}': str(data['B']['9']['patentInstitute']['ver_registeredMarks']),
+            
+            '{college_patent_published_marks}': str(data['B']['9']['patentInstitute']['publishedCount'] * 60),
+            '{college_patent_published_verified_marks}': str(data['B']['9']['patentInstitute']['ver_publishedMarks']),
+            
+            '{college_granted_marks}': str(data['B']['9']['patentInstitute']['grantedCount'] * 100),
+            '{college_granted_verified_marks}': str(data['B']['9']['patentInstitute']['ver_grantedMarks']),
+            
+            '{college_commercialized_marks}': str(data['B']['9']['patentInstitute']['commercializedCount'] * 200),
+            '{college_commercialized_verified_marks}': str(data['B']['9']['patentInstitute']['ver_commercializedMarks']),
+            '{college_patent_marks}': str(data['B']['9']['patentInstitute']['verified_marks']),
+            '{patents_marks}': str(data['B']['8']['patentIndividual']['verified_marks'] + data['B']['9']['patentInstitute']['verified_marks']),
+            
+            # 10. Research Grants
+            '{research_grants_amount}': str(data['B']['10']['researchGrants']['amount']),
+            '{research_grants_marks}': str(Math.floor(data['B']['10']['researchGrants']['amount'] / 200000) * 10),
+            '{research_grants_verified_marks}': str(data['B']['10']['researchGrants']['ver_amountMarks']),
+            
+            # 11. Training Revenue
+            '{training_amount}': str(data['B']['11']['trainingPrograms']['amount']),
+            '{training_marks}': str(Math.floor(data['B']['11']['trainingPrograms']['amount'] / 10000) * 5),
+            '{training_verified_marks}': str(data['B']['11']['trainingPrograms']['ver_amountMarks']),
+            
+            # 12. Non-Research Grants
+            '{nonresearch_grants_amount}': str(data['B']['12']['nonResearchGrants']['amount']),
+            '{nonresearch_grants_marks}': str(Math.floor(data['B']['12']['nonResearchGrants']['amount'] / 10000) * 5),
+            '{nonresearch_grants_verified_marks}': str(data['B']['12']['nonResearchGrants']['ver_amountMarks']),
+            
+            # 13. Products
+            
+            '{commercialized_products_marks}': str(data['B']['13']['productDevelopment']['commercializedCount'] * 100),
+            '{commercialized_products_verified_marks}': str(data['B']['13']['productDevelopment']['ver_commercializedMarks']),
+            
+            '{developed_products_marks}': str(data['B']['13']['productDevelopment']['developedCount'] * 40),
+            '{developed_products_verified_marks}': str(data['B']['13']['productDevelopment']['ver_developedMarks']),
+            
+            '{poc_products_marks}': str(data['B']['13']['productDevelopment']['pocCount'] * 10),
+            '{poc_products_verified_marks}': str(data['B']['13']['productDevelopment']['ver_pocMarks']),
+            '{products_marks}': str(data['B']['13']['productDevelopment']['verified_marks']),
+            
+            # 14. Startup PCCOE
+            '{startup_revenue_pccoe_amount}': str(data['B']['14']['startup']['revenueFiftyKCount']),
+            '{startup_revenue_pccoe_marks}': str(data['B']['14']['startup']['revenueFiftyKCount'] * 100),
+            '{startup_revenue_pccoe_verified_marks}': str(data['B']['14']['startup']['ver_revenueFiftyKMarks']),
+            '{startup_funding_pccoe_amount}': str(data['B']['14']['startup']['fundsFiveLakhsCount']),
+            '{startup_funding_pccoe_marks}': str(data['B']['14']['startup']['fundsFiveLakhsCount'] * 100),
+            '{startup_funding_pccoe_verified_marks}': str(data['B']['14']['startup']['ver_fundsFiveLakhsMarks']),
+            
+            '{startup_products_marks}': str(data['B']['14']['startup']['productsCount'] * 40),
+            '{startup_products_verified_marks}': str(data['B']['14']['startup']['ver_productsMarks']),
+            
+            '{startup_poc_marks}': str(data['B']['14']['startup']['pocCount'] * 10),
+            '{startup_poc_verified_marks}': str(data['B']['14']['startup']['ver_pocMarks']),
+            
+            '{startup_registered_marks}': str(data['B']['14']['startup']['registeredCount'] * 5),
+            '{startup_registered_verified_marks}': str(data['B']['14']['startup']['ver_registeredMarks']),
+            '{startup_pccoe_marks}': str(data['B']['14']['startup']['verified_marks']),
+            
+            # 15. Awards
+            
+            '{international_awards_marks}': str(data['B']['15']['awardsAndFellowships']['internationalAwardsCount'] * 30),
+            '{international_awards_verified_marks}': str(data['B']['15']['awardsAndFellowships']['ver_internationalAwardsMarks']),
+            
+            '{government_awards_marks}': str(data['B']['15']['awardsAndFellowships']['governmentAwardsCount'] * 20),
+            '{government_awards_verified_marks}': str(data['B']['15']['awardsAndFellowships']['ver_governmentAwardsMarks']),
+            
+            '{national_awards_marks}': str(data['B']['15']['awardsAndFellowships']['nationalAwardsCount'] * 5),
+            '{national_awards_verified_marks}': str(data['B']['15']['awardsAndFellowships']['ver_nationalAwardsMarks']),
+            
+            '{international_fellowship_marks}': str(data['B']['15']['awardsAndFellowships']['internationalFellowshipsCount'] * 50),
+            '{international_fellowship_verified_marks}': str(data['B']['15']['awardsAndFellowships']['ver_internationalFellowshipsMarks']),
+            
+            '{national_fellowship_marks}': str(data['B']['15']['awardsAndFellowships']['nationalFellowshipsCount'] * 30),
+            '{national_fellowship_verified_marks}': str(data['B']['15']['awardsAndFellowships']['ver_nationalFellowshipsMarks']),
+            '{awards_marks}': str(data['B']['15']['awardsAndFellowships']['verified_marks']),
+            
+            # 16. Industry Interaction
+            
+            '{active_mou_marks}': str(data['B']['16']['industryInteraction']['moUsCount'] * 10),
+            '{active_mou_verified_marks}': str(data['B']['16']['industryInteraction']['ver_moUsMarks']),
+            
+            '{lab_development_marks}': str(data['B']['16']['industryInteraction']['collaborationCount'] * 20),
+            '{lab_development_verified_marks}': str(data['B']['16']['industryInteraction']['ver_collaborationMarks']),
+            '{industry_interaction_marks}': str(data['B']['16']['industryInteraction']['verified_marks']),
+            
+            # 17. Industry Association
+            
+            '{internships_placements_marks}': str(data['B']['17']['internshipPlacement']['offersCount'] * 10),
+            '{internships_placements_verified_marks}': str(data['B']['17']['internshipPlacement']['ver_offersMarks']),
+            '{industry_association_marks}': str(data['B']['17']['internshipPlacement']['verified_marks']),
             
             # Total Section B
-            '{section_b_total}': str(data['B']['total_marks']),
+            '{section_b_total}': str(data['B']['final_verified_marks']),
             
-            # Section C placeholders (keeping these as they were)
+            # Section C placeholders
             '{qualification_marks}': str(data['C']['1']['qualification']['marks']),
             '{training_attended_marks}': str(data['C']['2']['trainingAttended']['marks']),
             '{training_organized_marks}': str(data['C']['3']['trainingOrganized']['marks']),
             '{phd_guided_marks}': str(data['C']['4']['phdGuided']['marks']),
-            '{section_c_total}': str(data['C']['total_marks'])
+            '{section_c_total}': str(data['C']['total_marks']),
+            
+            # New section D (Portfolio details)
+            '{portfolio_marks}': str(data['D']['portfolioDetails']['total_marks']),
+            '{section_d_total}': str(data['D']['total_marks']),
+            
+            # Grand total
+            '{grand_total}': str(data['grand_total']['grand_total'])
         })
-        
         # Replace placeholders in paragraphs and tables
         for paragraph in doc.paragraphs:
             for placeholder, value in placeholders.items():
@@ -824,14 +886,6 @@ def fill_template_document(data, user_id, department):
 from docx2pdf import convert
 import tempfile
 
-import cloudinary
-import cloudinary.uploader
-# Add after app initialization
-cloudinary.config(
-    cloud_name="dfbuztt4g",  # Add your cloud name
-    api_key="768753868147243",
-    api_secret="BD0XqxX5uuEis4JdmvsJerqEArA"    # Add your API secret
-)
 
 @app.route('/<department>/<user_id>/generate-doc', methods=['GET'])
 def generate_document(department, user_id, format):
@@ -1010,14 +1064,12 @@ def get_stored_document(department, user_id, format):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
 # Add after your app initialization and before running the app
 verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_collections)
 app.register_blueprint(verification_bp)
 # Add this line after creating the Flask app
 app.register_blueprint(faculty_list)
 
-# Keep your existing routes...
 
 # Add these status change endpoints after your existing routes
 @app.route('/<department>/<user_id>/submit-form', methods=['POST'])
