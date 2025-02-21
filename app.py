@@ -15,6 +15,7 @@ from docx import Document
 from werkzeug.utils import secure_filename
 from gridfs import GridFS
 from bson.objectid import ObjectId
+import math
 # Add this import at the top\
 from verification_commity import create_verification_blueprint
 # Add this import at the top
@@ -582,7 +583,7 @@ def fill_template_document(data, user_id, department):
             raise Exception("User not found")
 
         # Load the template document
-        doc = Document("FDW.docx")
+        doc = Document("Faculty Self Appraisal Scheme -PCCoE-24-25.docx")
         
         # Initial placeholders with user details
         placeholders = {
@@ -590,11 +591,88 @@ def fill_template_document(data, user_id, department):
             '{faculty_designation}': user_data.get('desg', ''),
             '{faculty_department}': user_data.get('dept', ''),
         }
-        
+        role = user_data.get('role', '')
         # Add all other placeholders using the data parameter
         
             # Rest of your existing code...
+        section_a_marks = data.get('A', {}).get('total_marks', 0)
+        Prof_A = 0
+        Assoc_A = 0
+        Assis_A = 0
+        Prof_A_total_marks = 0
+        Assoc_A_total_marks = 0
+        Assis_A_total_marks = 0
+        if role == 'Assistant Professor':
+            section_a_marks = section_a_marks / 1.0
+            Assis_A =  section_a_marks
+            Assis_A_total_marks = (data.get('A', {}).get('total_marks', 0))
+            
+        if role == 'Associate Professor':
+            section_a_marks = section_a_marks / 0.818
+            Assoc_A =  section_a_marks
+            Assoc_A_total_marks = (data.get('A', {}).get('total_marks', 0))
+        elif role == 'Professor':
+            section_a_marks = section_a_marks / 0.68        
+            Prof_A =  section_a_marks
+            Prof_A_total_marks = (data.get('A', {}).get('total_marks', 0))
 
+        #adding all the marks in the B section and store in the variable
+        b_total_verified = data['B']['1']['journalPapers']['verified_marks'] + data['B']['2']['conferencePapers']['verified_marks'] + data['B']['3']['bookChapters']['verified_marks'] + data['B']['4']['books']['verified_marks'] + data['B']['5']['citations']['verified_marks'] + data['B']['6']['copyrightIndividual']['verified_marks'] + data['B']['7']['copyrightInstitute']['verified_marks'] + data['B']['8']['patentIndividual']['verified_marks'] + data['B']['9']['patentInstitute']['verified_marks'] + data['B']['10']['researchGrants']['verified_marks'] + data['B']['11']['trainingPrograms']['verified_marks'] + data['B']['12']['nonResearchGrants']['verified_marks'] + data['B']['13']['productDevelopment']['verified_marks'] + data['B']['14']['startup']['verified_marks'] + data['B']['15']['awardsAndFellowships']['verified_marks'] + data['B']['16']['industryInteraction']['verified_marks'] + data['B']['17']['internshipPlacement']['verified_marks']
+        # b_total = data['B']['1']['journalPapers']['total_marks'] + data['B']['2']['conferencePapers']['total_marks'] + data['B']['3']['bookChapters']['total_marks'] + data['B']['4']['books']['total_marks'] + data['B']['5']['citations']['total_marks'] + data['B']['6']['copyrightIndividual']['total_marks'] + data['B']['7']['copyrightInstitute']['total_marks'] + data['B']['8']['patentIndividual']['total_marks'] + data['B']['9']['patentInstitute']['total_marks'] + data['B']['10']['researchGrants']['total_marks'] + data['B']['11']['trainingPrograms']['total_marks'] + data['B']['12']['nonResearchGrants']['total_marks'] + data['B']['13']['productDevelopment']['total_marks'] + data['B']['14']['startup']['total_marks']
+        b_total = data['B']['1']['journalPapers']['marks'] + data['B']['2']['conferencePapers']['marks'] + data['B']['3']['bookChapters']['marks'] + data['B']['4']['books']['marks'] + data['B']['5']['citations']['marks'] + data['B']['6']['copyrightIndividual']['marks'] + data['B']['7']['copyrightInstitute']['marks'] + data['B']['8']['patentIndividual']['marks'] + data['B']['9']['patentInstitute']['marks'] + data['B']['10']['researchGrants']['marks'] + data['B']['11']['trainingPrograms']['marks'] + data['B']['12']['nonResearchGrants']['marks'] + data['B']['13']['productDevelopment']['marks'] + data['B']['14']['startup']['marks'] + data['B']['15']['awardsAndFellowships']['marks'] + data['B']['16']['industryInteraction']['marks'] + data['B']['17']['internshipPlacement']['marks']
+        print(f'#############{str(b_total)}##############{str(b_total_verified)}')
+        Prof_B = 0
+        Assoc_B = 0
+        Assis_B = 0
+        
+        Prof_B_total_marks = 0
+        Assoc_B_total_marks = 0
+        Assis_B_total_marks = 0
+        
+        Prof_B_total_verified = 0
+        Assoc_B_total_verified = 0
+        Assis_B_total_verified = 0
+        
+        if role == 'Assistant Professor':
+            Assis_B =  b_total
+            Assis_B_total_marks = data['B']['total_marks']
+            Assis_B_total_verified = data['B']['final_verified_marks']
+        if role == 'Associate Professor':
+            Assoc_B =  b_total
+            Assoc_B_total_marks = data['B']['total_marks']
+            Assoc_B_total_verified = data['B']['final_verified_marks']
+        elif role == 'Professor':
+            Prof_B =  b_total
+            Prof_B_total_marks = data['B']['total_marks']
+            Prof_B_total_verified = data['B']['final_verified_marks']
+            
+        #get the verifier name from the verifier id
+        verifier_id = data['B']['verifier_id']
+        verifier_name = db_users.find_one({"_id": verifier_id})['name']
+        
+        Prof_qualification_marks = 0
+        qualification_marks  = 0
+        if role == 'Assistant Professor':
+            qualification_marks =  data['C']['1']['qualification']['marks']
+        else:
+            Prof_qualification_marks =  data['C']['1']['qualification']['marks']
+            
+        c_total = data['C']['1']['qualification']['marks'] + data['C']['2']['trainingAttended']['marks'] + data['C']['3']['trainingOrganized']['marks'] + data['C']['4']['phdGuided']['marks']
+        Prof_C = 0
+        Assoc_C = 0
+        Assis_C = 0
+        Prof_C_total_marks = 0
+        Assoc_C_total_marks = 0
+        Assis_C_total_marks = 0
+        if role == 'Assistant Professor':
+            Assis_C =  c_total
+            Assis_C_total_marks = data['C']['total_marks']
+        if role == 'Associate Professor':
+            Assoc_C =  c_total
+            Assoc_C_total_marks = data['C']['total_marks']
+        elif role == 'Professor':
+            Prof_C =  c_total
+            Prof_C_total_marks = data['C']['total_marks']
         # Placeholders and their corresponding values from different sections
         placeholders.update({
             # Section A placeholders
@@ -606,10 +684,18 @@ def fill_template_document(data, user_id, department):
             '{projects_guided_marks}': str(round(data['A']['6']['total_marks'], 2)),
             '{student_feedback_marks}': str(round(data['A']['7']['total_marks'], 2)),
             '{ptg_meetings_marks}': str(round(data['A']['8']['total_marks'], 2)),
-            '{section_a_total}': str(round(data['A']['total_marks'], 2)),
+            '{section_a_total}': str(round(section_a_marks, 2)),
+            '{Prof_A}': str(round(Prof_A, 2)),
+            '{Assoc_A}': str(round(Assoc_A, 2)),
+            '{Assis_A}': str(round(Assis_A, 2)),
+            '{Prof_A_total_marks}': str(round(Prof_A_total_marks, 2)),
+            '{Assoc_A_total_marks}': str(round(Assoc_A_total_marks, 2)),
+            '{Assis_A_total_marks}': str(round(Assis_A_total_marks, 2)),
             
             # Section B detailed placeholders - Updated to include verification marks
             # 1. Journal Papers
+            
+            
             
             '{sci_papers_marks}': str(data['B']['1']['journalPapers']['sciCount'] * 100),
             '{sci_papers_verified_marks}': str(data['B']['1']['journalPapers']['ver_sciMarks']),
@@ -658,14 +744,13 @@ def fill_template_document(data, user_id, department):
             '{books_marks}': str(data['B']['4']['books']['verified_marks']),
             
             # 5. Citations
-            
-            '{wos_citations_marks}': str(Math.floor(data['B']['5']['citations']['webOfScienceCount'] / 3) * 3),
+            '{wos_citations_marks}': str(math.floor(data['B']['5']['citations']['webOfScienceCount'] / 3) * 3),
             '{wos_citations_verified_marks}': str(data['B']['5']['citations']['ver_webOfScienceMarks']),
             
-            '{scopus_citations_marks}': str(Math.floor(data['B']['5']['citations']['scopusCount'] / 3) * 3),
+            '{scopus_citations_marks}': str(math.floor(data['B']['5']['citations']['scopusCount'] / 3) * 3),
             '{scopus_citations_verified_marks}': str(data['B']['5']['citations']['ver_scopusMarks']),
             
-            '{google_citations_marks}': str(Math.floor(data['B']['5']['citations']['googleScholarCount'] / 3) * 1),
+            '{google_citations_marks}': str(math.floor(data['B']['5']['citations']['googleScholarCount'] / 3) * 1),
             '{google_citations_verified_marks}': str(data['B']['5']['citations']['ver_googleScholarMarks']),
             '{citations_marks}': str(data['B']['5']['citations']['verified_marks']),
             
@@ -702,6 +787,7 @@ def fill_template_document(data, user_id, department):
             '{individual_commercialized_verified_marks}': str(data['B']['8']['patentIndividual']['ver_commercializedMarks']),
             '{individual_patent_marks}': str(data['B']['8']['patentIndividual']['verified_marks']),
             
+            #9
             
             '{college_patent_registered_marks}': str(data['B']['9']['patentInstitute']['registeredCount'] * 40),
             '{college_patent_registered_verified_marks}': str(data['B']['9']['patentInstitute']['ver_registeredMarks']),
@@ -719,17 +805,17 @@ def fill_template_document(data, user_id, department):
             
             # 10. Research Grants
             '{research_grants_amount}': str(data['B']['10']['researchGrants']['amount']),
-            '{research_grants_marks}': str(Math.floor(data['B']['10']['researchGrants']['amount'] / 200000) * 10),
+            '{research_grants_marks}': str(math.floor(data['B']['10']['researchGrants']['amount'] / 200000) * 10),
             '{research_grants_verified_marks}': str(data['B']['10']['researchGrants']['ver_amountMarks']),
             
             # 11. Training Revenue
             '{training_amount}': str(data['B']['11']['trainingPrograms']['amount']),
-            '{training_marks}': str(Math.floor(data['B']['11']['trainingPrograms']['amount'] / 10000) * 5),
+            '{training_marks}': str(math.floor(data['B']['11']['trainingPrograms']['amount'] / 10000) * 5),
             '{training_verified_marks}': str(data['B']['11']['trainingPrograms']['ver_amountMarks']),
             
             # 12. Non-Research Grants
             '{nonresearch_grants_amount}': str(data['B']['12']['nonResearchGrants']['amount']),
-            '{nonresearch_grants_marks}': str(Math.floor(data['B']['12']['nonResearchGrants']['amount'] / 10000) * 5),
+            '{nonresearch_grants_marks}': str(math.floor(data['B']['12']['nonResearchGrants']['amount'] / 10000) * 5),
             '{nonresearch_grants_verified_marks}': str(data['B']['12']['nonResearchGrants']['ver_amountMarks']),
             
             # 13. Products
@@ -796,20 +882,45 @@ def fill_template_document(data, user_id, department):
             '{industry_association_marks}': str(data['B']['17']['internshipPlacement']['verified_marks']),
             
             # Total Section B
-            '{section_b_total}': str(data['B']['final_verified_marks']),
+            '{B_total_marks}': str(b_total),
+            '{section_b_total}': str(b_total_verified),
+            '{Prof_B}': str(Prof_B),
+            '{Assoc_B}': str(Assoc_B),
+            '{Assis_B}': str(Assis_B),
+            '{Prof_B_total_marks}': str(Prof_B_total_marks),
+            '{Assoc_B_total_marks}': str(Assoc_B_total_marks),
+            '{Assis_B_total_marks}': str(Assis_B_total_marks),
+            '{Prof_B_total_verified}': str(Prof_B_total_verified),
+            '{Assoc_B_total_verified}': str(Assoc_B_total_verified),
+            '{Assis_B_total_verified}': str(Assis_B_total_verified),
+            '{verf_committee_name}': verifier_name,
             
             # Section C placeholders
-            '{qualification_marks}': str(data['C']['1']['qualification']['marks']),
+            '{Prof_qualification_marks}': str(Prof_qualification_marks),
+            '{qualification_marks}': str(qualification_marks),
             '{training_attended_marks}': str(data['C']['2']['trainingAttended']['marks']),
             '{training_organized_marks}': str(data['C']['3']['trainingOrganized']['marks']),
             '{phd_guided_marks}': str(data['C']['4']['phdGuided']['marks']),
-            '{section_c_total}': str(data['C']['total_marks']),
+            '{section_c_total}': str(c_total),
+            '{Prof_C}': str(Prof_C),
+            '{Assoc_C}': str(Assoc_C),
+            '{Assis_C}': str(Assis_C),
+            '{Prof_C_total_marks}': str(Prof_C_total_marks),
+            '{Assoc_C_total_marks}': str(Assoc_C_total_marks),
+            '{Assis_C_total_marks}': str(Assis_C_total_marks),
             
             # New section D (Portfolio details)
-            '{portfolio_marks}': str(data['D']['portfolioDetails']['total_marks']),
+            '{Institude_portfolio}': data['D']['portfolioDetails']['instituteLevelPortfolio'],
+            '{Department_Portfolio}': data['D']['portfolioDetails']['departmentLevelPortfolio'],
+            '{self_awarded_marks}': str(data['D']['portfolioDetails']['selfAwardedMarks']),
+            '{hodMarks}': str(data['D']['portfolioDetails']['superiorMarks']['hodMarks']),
             '{section_d_total}': str(data['D']['total_marks']),
             
             # Grand total
+            '{total_for_C}' : str(data['C']['total_marks']),
+            '{total_for_B}' : str(data['B']['total_marks']),
+            '{total_for_A}' : str(data['A']['total_marks']),
+            '{total_for_B_verified}' : str(data['B']['final_verified_marks']),
             '{grand_total}': str(data['grand_total']['grand_total'])
         })
         # Replace placeholders in paragraphs and tables
@@ -887,8 +998,10 @@ import tempfile
 
 
 @app.route('/<department>/<user_id>/generate-doc', methods=['GET'])
-def generate_document(department, user_id, format):
-        
+def generate_document(department, user_id):
+    print(user_id)
+    temp_docx = None
+    output_path = None
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -925,7 +1038,9 @@ def generate_document(department, user_id, format):
         data = {
             'A': user_doc.get('A', {}),
             'B': user_doc.get('B', {}),
-            'C': user_doc.get('C', {})
+            'C': user_doc.get('C', {}),
+            'D': user_doc.get('D', {}),
+            'grand_total': user_doc.get('grand_total',{'grand_total':0}),
         }
 
         doc = fill_template_document(data, user_id, department)
