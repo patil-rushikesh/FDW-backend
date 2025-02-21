@@ -124,6 +124,7 @@ def add_user():
             return jsonify({"error": "Invalid department"}), 400
 
     except Exception as e:
+        print(str(e))
         return jsonify({"error": str(e)}), 500
 
 # Get all users
@@ -588,7 +589,7 @@ def fill_template_document(data, user_id, department):
         # Initial placeholders with user details
         placeholders = {
             '{faculty_name}': user_data.get('name', ''),
-            '{faculty_designation}': user_data.get('desg', ''),
+            '{faculty_designation}': user_data.get('role', ''),
             '{faculty_department}': user_data.get('dept', ''),
         }
         role = user_data.get('role', '')
@@ -923,7 +924,7 @@ def fill_template_document(data, user_id, department):
             '{total_for_B}' : str(round(data['B']['total_marks'],2)),
             '{total_for_A}' : str(round(data['A']['total_marks'],2)),
             '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'],2)),
-            '{grand_total}': str(round(data['grand_total']['grand_total)'],2))
+            '{grand_total}': str(round(data['grand_total']['grand_total'],2))
         })
         # Replace placeholders in paragraphs and tables
         for paragraph in doc.paragraphs:
