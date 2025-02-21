@@ -648,7 +648,9 @@ def fill_template_document(data, user_id, department):
             
         #get the verifier name from the verifier id
         verifier_id = data['B']['verifier_id']
-        verifier_name = db_users.find_one({"_id": verifier_id})['name']
+        verifier_name = 'Not Verified Yet'
+        if verifier_id != '':
+            verifier_name = db_users.find_one({"_id": verifier_id})['name']
         
         Prof_qualification_marks = 0
         qualification_marks  = 0
@@ -917,11 +919,11 @@ def fill_template_document(data, user_id, department):
             '{section_d_total}': str(data['D']['total_marks']),
             
             # Grand total
-            '{total_for_C}' : str(data['C']['total_marks']),
-            '{total_for_B}' : str(data['B']['total_marks']),
-            '{total_for_A}' : str(data['A']['total_marks']),
-            '{total_for_B_verified}' : str(data['B']['final_verified_marks']),
-            '{grand_total}': str(data['grand_total']['grand_total'])
+            '{total_for_C}' : str(round(data['C']['total_marks'],2)),
+            '{total_for_B}' : str(round(data['B']['total_marks'],2)),
+            '{total_for_A}' : str(round(data['A']['total_marks'],2)),
+            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'],2)),
+            '{grand_total}': str(round(data['grand_total']['grand_total)'],2))
         })
         # Replace placeholders in paragraphs and tables
         for paragraph in doc.paragraphs:
@@ -1100,6 +1102,7 @@ def generate_document(department, user_id):
                     os.remove(path)
                 except OSError:
                     pass
+        print(str(e))
         return jsonify({"error": str(e)}), 500
     finally:
         # Cleanup temporary files and uninitialize COM
