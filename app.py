@@ -6,7 +6,6 @@ import bcrypt
 from dotenv import load_dotenv
 from mail import send_username_password_mail
 from flask_cors import CORS  # Add this import
-from PyPDF2 import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 import io
@@ -621,7 +620,7 @@ def fill_template_document(data, user_id, department):
         b_total_verified = data['B']['1']['journalPapers']['verified_marks'] + data['B']['2']['conferencePapers']['verified_marks'] + data['B']['3']['bookChapters']['verified_marks'] + data['B']['4']['books']['verified_marks'] + data['B']['5']['citations']['verified_marks'] + data['B']['6']['copyrightIndividual']['verified_marks'] + data['B']['7']['copyrightInstitute']['verified_marks'] + data['B']['8']['patentIndividual']['verified_marks'] + data['B']['9']['patentInstitute']['verified_marks'] + data['B']['10']['researchGrants']['verified_marks'] + data['B']['11']['trainingPrograms']['verified_marks'] + data['B']['12']['nonResearchGrants']['verified_marks'] + data['B']['13']['productDevelopment']['verified_marks'] + data['B']['14']['startup']['verified_marks'] + data['B']['15']['awardsAndFellowships']['verified_marks'] + data['B']['16']['industryInteraction']['verified_marks'] + data['B']['17']['internshipPlacement']['verified_marks']
         # b_total = data['B']['1']['journalPapers']['total_marks'] + data['B']['2']['conferencePapers']['total_marks'] + data['B']['3']['bookChapters']['total_marks'] + data['B']['4']['books']['total_marks'] + data['B']['5']['citations']['total_marks'] + data['B']['6']['copyrightIndividual']['total_marks'] + data['B']['7']['copyrightInstitute']['total_marks'] + data['B']['8']['patentIndividual']['total_marks'] + data['B']['9']['patentInstitute']['total_marks'] + data['B']['10']['researchGrants']['total_marks'] + data['B']['11']['trainingPrograms']['total_marks'] + data['B']['12']['nonResearchGrants']['total_marks'] + data['B']['13']['productDevelopment']['total_marks'] + data['B']['14']['startup']['total_marks']
         b_total = data['B']['1']['journalPapers']['marks'] + data['B']['2']['conferencePapers']['marks'] + data['B']['3']['bookChapters']['marks'] + data['B']['4']['books']['marks'] + data['B']['5']['citations']['marks'] + data['B']['6']['copyrightIndividual']['marks'] + data['B']['7']['copyrightInstitute']['marks'] + data['B']['8']['patentIndividual']['marks'] + data['B']['9']['patentInstitute']['marks'] + data['B']['10']['researchGrants']['marks'] + data['B']['11']['trainingPrograms']['marks'] + data['B']['12']['nonResearchGrants']['marks'] + data['B']['13']['productDevelopment']['marks'] + data['B']['14']['startup']['marks'] + data['B']['15']['awardsAndFellowships']['marks'] + data['B']['16']['industryInteraction']['marks'] + data['B']['17']['internshipPlacement']['marks']
-
+        print(f'#############{str(b_total)}##############{str(b_total_verified)}')
         Prof_B = 0
         Assoc_B = 0
         Assis_B = 0
@@ -649,7 +648,9 @@ def fill_template_document(data, user_id, department):
             
         #get the verifier name from the verifier id
         verifier_id = data['B']['verifier_id']
-        verifier_name = db_users.find_one({"_id": verifier_id})['name']
+        verifier_name = 'Not Verified Yet'
+        if verifier_id != '':
+            verifier_name = db_users.find_one({"_id": verifier_id})['name']
         
         Prof_qualification_marks = 0
         qualification_marks  = 0
@@ -918,11 +919,11 @@ def fill_template_document(data, user_id, department):
             '{section_d_total}': str(data['D']['total_marks']),
             
             # Grand total
-            '{total_for_C}' : str(data['C']['total_marks']),
-            '{total_for_B}' : str(data['B']['total_marks']),
-            '{total_for_A}' : str(data['A']['total_marks']),
-            '{total_for_B_verified}' : str(data['B']['final_verified_marks']),
-            '{grand_total}': str(data['grand_total']['grand_total'])
+            '{total_for_C}' : str(round(data['C']['total_marks'],2)),
+            '{total_for_B}' : str(round(data['B']['total_marks'],2)),
+            '{total_for_A}' : str(round(data['A']['total_marks'],2)),
+            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'],2)),
+            '{grand_total}': str(round(data['grand_total']['grand_total)'],2))
         })
         # Replace placeholders in paragraphs and tables
         for paragraph in doc.paragraphs:
@@ -1101,6 +1102,7 @@ def generate_document(department, user_id):
                     os.remove(path)
                 except OSError:
                     pass
+        print(str(e))
         return jsonify({"error": str(e)}), 500
     finally:
         # Cleanup temporary files and uninitialize COM
