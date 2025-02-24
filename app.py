@@ -1322,6 +1322,37 @@ def verify_authority(department, user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+
+#To get all the deans
+# Add this after your existing routes
+
+@app.route('/deans', methods=['GET'])
+def get_deans():
+    """Get all users with role 'Dean'"""
+    try:
+        # Find users with role 'Dean'
+        deans = db_users.find({"role": "Dean"})
+        
+        if not deans:
+            return jsonify({
+                "message": "No deans found",
+                "data": []
+            }), 404
+            
+        # Convert cursor to list and return
+        dean_list = list(deans)
+        
+        return jsonify({
+            "message": "Deans retrieved successfully",
+            "data": json.loads(dumps(dean_list))
+        }), 200
+            
+    except Exception as e:
+        return jsonify({
+            "error": "Failed to retrieve deans",
+            "message": str(e)
+        }), 500
 
 
 
