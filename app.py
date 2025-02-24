@@ -101,7 +101,7 @@ def add_user():
                 mongo.db.lookup.insert_one({
                     "_id": "deans",
                     "higherDeanId": {
-                        higher_dean_id: [data["_id"]]
+                        higher_dean_id: [{"id" : data["_id"], "department" : data["dept"]}]
                     }
                 })
         except Exception as e:
@@ -1371,6 +1371,11 @@ def verify_authority(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 
+
+from dean_associates import dean_associates
+
+# Add this line with your other blueprint registrations
+app.register_blueprint(dean_associates)
 
 if __name__ == '__main__':
     app.run(debug=True)
