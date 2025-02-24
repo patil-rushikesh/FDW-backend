@@ -623,6 +623,7 @@ def fill_template_document(data, user_id, department):
             '{faculty_department}': user_data.get('dept', ''),
         }
         role = user_data.get('role', '')
+        desg = user_data.get('desg', '')
         # Add all other placeholders using the data parameter
         
             # Rest of your existing code...
@@ -707,6 +708,28 @@ def fill_template_document(data, user_id, department):
             Prof_C =  c_total
             Prof_C_total_marks = data['C']['total_marks']
         # Placeholders and their corresponding values from different sections
+        self_awarded_marks = data['D']['selfAwardedMarks']
+        hod_marks = data['D']['hodMarks']
+        total_marks_D= data['D']['total_marks']
+        assTotalMarks = 0
+        assDeanHODMarks = 0
+        assDeanDeanMarks = 0
+        sumMarks_hod_dean = 0
+        assSelfawardedmarks = 0
+        if desg == 'Associate Dean' : 
+            self_awarded_marks = 0
+            total_marks_D = 0
+            hod_marks = 0
+            assDeanHODMarks = data['D']['hodMarks']
+            assDeanDeanMarks = data['D']['deanMarks']
+            sumMarks_hod_dean = (data['D']['hodMarks'] + data['D']['deanMarks']) / 2
+            assSelfawardedmarks = data['D']['selfAwardedMarks']
+            assTotalMarks = assSelfawardedmarks + sumMarks_hod_dean
+        
+        
+        
+        
+        
         placeholders.update({
             # Section A placeholders
             '{result_analysis_marks}': str(round(data['A']['1']['total_marks'], 2)),
@@ -943,11 +966,15 @@ def fill_template_document(data, user_id, department):
             '{Assis_C_total_marks}': str(Assis_C_total_marks),
             
             # New section D (Portfolio details)
-            '{Institude_portfolio}': data['D']['portfolioDetails']['instituteLevelPortfolio'],
-            '{Department_Portfolio}': data['D']['portfolioDetails']['departmentLevelPortfolio'],
-            '{self_awarded_marks}': str(data['D']['portfolioDetails']['selfAwardedMarks']),
-            '{hodMarks}': str(data['D']['portfolioDetails']['superiorMarks']['hodMarks']),
-            '{section_d_total}': str(data['D']['total_marks']),
+            '{Department_portfolio}': data['D']['departmentLevelPortfolio'],
+            '{Institute_Portfolio}': data['D']['instituteLevelPortfolio'],
+            '{self_awarded_marks}': str(self_awarded_marks),
+            '{hodMarks}': str(hod_marks),
+            '{section_d_total}': str(total_marks_D),
+            '{assDeanDeanMarks}' : str(assDeanDeanMarks),
+            '{assDeanHODMarks}' : str(assDeanHODMarks),
+            '{assTotalMarks}' : str(assTotalMarks),
+            '{assSelfawardedmarks}' : str(assSelfawardedmarks),
             
             # Grand total
             '{total_for_C}' : str(round(data['C']['total_marks'],2)),
