@@ -78,6 +78,36 @@ def add_user():
     
     if "desg" not in data:
         data["desg"] = "Faculty"
+        
+    if data['desg'] == 'Associate Dean':
+        # Get the Dean's ID from the request data
+        higher_dean_id = data.get('higherDean')
+        if not higher_dean_id:
+            return jsonify({"error": "Higher Dean ID is required for Associate Dean"}), 400
+            
+        try:
+            # Check if lookup document exists
+            lookup_doc = mongo.db.lookup.find_one({"_id": "deans"})
+            
+            if lookup_doc:
+                # Update existing lookup document
+                mongo.db.lookup.update_one(
+                    {"_id": "deans"},
+                    {"$push": {f"higherDeanId.{higher_dean_id}": data["_id"]}},
+                    upsert=True
+                )
+            else:
+                # Create new lookup document
+                mongo.db.lookup.insert_one({
+                    "_id": "deans",
+                    "higherDeanId": {
+                        higher_dean_id: [data["_id"]]
+                    }
+                })
+        except Exception as e:
+            return jsonify({"error": f"Error updating lookup collection: {str(e)}"}), 500
+
+        
 
     # Add new default fields
     data["isInVerificationPanel"] = False
@@ -263,7 +293,7 @@ def handle_post_A(department, user_id):
         data = request.get_json()
         if not data:
             return jsonify({"error": "Invalid JSON data"}), 400
-        
+
         collection = department_collections.get(department)
         
         if collection is None:
@@ -1187,6 +1217,23 @@ verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_
 app.register_blueprint(verification_bp)
 # Add this line after creating the Flask app
 app.register_blueprint(faculty_list)
+
+@app.route('/<department>/<user_id>/get-status', methods=['GET'])
+def get_status(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        user_doc  = collection.find_one({"_id" : user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+        current_status = user_doc.get("status","pending")
+        return jsonify({
+                "message": "Form submitted successfully",
+                "status": f"{current_status}"
+            }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # Add these status change endpoints after your existing routes
