@@ -78,6 +78,36 @@ def add_user():
     
     if "desg" not in data:
         data["desg"] = "Faculty"
+        
+    if data['desg'] == 'Associate Dean':
+        # Get the Dean's ID from the request data
+        higher_dean_id = data.get('higherDean')
+        if not higher_dean_id:
+            return jsonify({"error": "Higher Dean ID is required for Associate Dean"}), 400
+            
+        try:
+            # Check if lookup document exists
+            lookup_doc = mongo.db.lookup.find_one({"_id": "deans"})
+            
+            if lookup_doc:
+                # Update existing lookup document
+                mongo.db.lookup.update_one(
+                    {"_id": "deans"},
+                    {"$push": {f"higherDeanId.{higher_dean_id}": data["_id"]}},
+                    upsert=True
+                )
+            else:
+                # Create new lookup document
+                mongo.db.lookup.insert_one({
+                    "_id": "deans",
+                    "higherDeanId": {
+                        higher_dean_id: [data["_id"]]
+                    }
+                })
+        except Exception as e:
+            return jsonify({"error": f"Error updating lookup collection: {str(e)}"}), 500
+
+        
 
     # Add new default fields
     data["isInVerificationPanel"] = False
