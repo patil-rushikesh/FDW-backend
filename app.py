@@ -975,6 +975,7 @@ def fill_template_document(data, user_id, department):
             '{assDeanHODMarks}' : str(assDeanHODMarks),
             '{assTotalMarks}' : str(assTotalMarks),
             '{assSelfawardedmarks}' : str(assSelfawardedmarks),
+            '{sumMarks_hod_dean}' : str(sumMarks_hod_dean),
             
             # Grand total
             '{total_for_C}' : str(round(data['C']['total_marks'],2)),
