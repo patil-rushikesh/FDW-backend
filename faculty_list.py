@@ -52,7 +52,6 @@ def calculate_grand_total(data):
 
 @faculty_list.route('/faculty/<department>', methods=['GET'])
 def get_faculty_list(department):
-
     try:
         # Get the department collection
         department_collection = {
@@ -66,7 +65,7 @@ def get_faculty_list(department):
             "Mechanical": mongo_fdw.db.Mechanical
         }.get(department)
 
-        if  department_collection is None:
+        if department_collection is None:
             return jsonify({"error": "Invalid department"}), 400
 
         # Get the lookup document for the department
@@ -89,6 +88,7 @@ def get_faculty_list(department):
                     "_id": user_id,
                     "name": user_profile.get("name", ""),
                     "role": role,
+                    "designation": user_profile.get("desg", "Faculty"),  # Added designation field
                     "grand_marks": faculty_data.get("grand_total", 0),
                     "status": faculty_data.get("status", "pending")
                 }
@@ -107,7 +107,7 @@ def get_faculty_list(department):
             "message": str(e)
         }), 500
     
-
+    
 @faculty_list.route('/total_marks/<department>/<faculty_id>', methods=['GET'])
 def get_total_marks(department, faculty_id):
     try:
