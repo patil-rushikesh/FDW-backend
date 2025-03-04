@@ -134,7 +134,7 @@ def create_external(department):
             return jsonify({
                 "message": "External reviewer added successfully",
                 "data": external_doc,
-                "credentials_sent": email_sent
+                # "credentials_sent": email_sent
             }), 201
         else:
             return jsonify({"error": "Failed to add external reviewer"}), 400
