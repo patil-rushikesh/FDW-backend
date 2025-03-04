@@ -221,6 +221,8 @@ def assign_externals(department):
                     "reviewer_info": reviewer,
                     "assigned_faculty": faculty_list
                 }
+                
+        print(assignments)
 
         # Update assignments
         result = collection.update_one(
@@ -232,8 +234,7 @@ def assign_externals(department):
     
         return jsonify({
             "message": "External reviewers assigned successfully",
-            "assignments": assignments,
-            "result" : result
+            "assignments": assignments
         }), 200
         
     except Exception as e:
