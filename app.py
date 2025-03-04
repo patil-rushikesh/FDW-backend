@@ -837,8 +837,9 @@ def handle_post_B(department, user_id):
             "final_verified_marks": 0,
             "verifier_id": ""}
         for field,value in checkData.items() :
-            print(f"{field} is not present")
-            data[field] = value
+            if field not in data:
+                print(f"{field} is not present")
+                data[field] = value
         # Rest of your existing code for database update
         collection = department_collections.get(department)
         if collection is None:
@@ -892,7 +893,7 @@ def get_section_B(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 #Section C Data Adding Start here
-@app.route('/<department>/<user_id>/C', methods=['POST'])
+@app.route('/<department>/<user_id>/C', methods = ['POST'])
 def handle_post_C(department, user_id):
     try:
         data = request.get_json()

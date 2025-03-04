@@ -269,23 +269,14 @@ def update_verified_marks(department, faculty_id):
             }
         }
 
-        # Update grand total document using upsert with $set
-        department_collection.update_one(
-            {"_id": "grand_total"},
-            {
-                "$set": {
-                    f"faculty_data.{faculty_id}": grand_total_doc["faculty_data"][faculty_id]
-                }
-            },
-            upsert=True
-        )
+        
 
         # Update original faculty document
         department_collection.update_one(
             {"_id": faculty_id},
             {
                 "$set": {
-                    **{f"{section}": section_totals[section] for section in sections},
+                    **{f"grand_marks_{section}": section_totals[section] for section in sections},
                     "grand_verified_marks": round(grand_verified_total, 2),
                     "status": "verified"
                 }
