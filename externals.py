@@ -108,13 +108,24 @@ def create_external(department):
             "designation": data['designation'],
             "specialization": data['specialization'],
             "organization": data['organization'],
-            "address": data.get('address', '')  # Optional field
+            "address": data.get('address', ''),  # Optional field
+            "isExternal": True,  # Add isExternal flag
+            "dept": department  # Add department info
         }
 
         # Add to signin collection with password same as ID
         salt = bcrypt.gensalt()
         hashed_password = bcrypt.hashpw(external_id.encode('utf-8'), salt)
         db_signin.insert_one({"_id": external_id, "password": hashed_password})
+
+        # Add to db_users collection
+        user_doc = {
+            **external_doc,  # Include all fields from external_doc
+            "role": "External Reviewer",  # Add role
+            "isExternal": True,  # Add isExternal flag
+            "facultyToReview": []  # Initialize empty list for faculty assignments
+        }
+        db_users.insert_one(user_doc)
 
         # Update or create externals document in department collection
         result = collection.update_one(
