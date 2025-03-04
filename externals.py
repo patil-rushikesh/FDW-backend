@@ -229,14 +229,13 @@ def assign_externals(department):
             upsert=True
         )
 
-        if result.modified_count > 0 or result.upserted_id:
-            return jsonify({
-                "message": "External reviewers assigned successfully",
-                "assignments": assignments
-            }), 200
-        else:
-            return jsonify({"error": "No changes made"}), 400
-
+    
+        return jsonify({
+            "message": "External reviewers assigned successfully",
+            "assignments": assignments,
+            "result" : result
+        }), 200
+        
     except Exception as e:
         print(f"Error assigning external reviewers: {str(e)}")
         return jsonify({"error": str(e)}), 500
@@ -266,8 +265,8 @@ def get_external_assignments(department):
         print(f"Error retrieving external assignments: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@externals.route('/<department>/external-assignments/<email>', methods=['GET'])
-def get_external_specific_assignments(department, email):
+@externals.route('/<department>/external-assignments/<id>', methods=['GET'])
+def get_external_specific_assignments(department, id):
     """Get assignments for a specific external reviewer"""
     try:
         collection = department_collections.get(department)
@@ -275,7 +274,7 @@ def get_external_specific_assignments(department, email):
             return jsonify({"error": "Invalid department"}), 400
 
         assignments = collection.find_one({"_id": "externals_assignments"})
-        if not assignments or email not in assignments:
+        if not assignments or id not in assignments:
             return jsonify({
                 "message": "No assignments found for this external reviewer",
                 "data": {}
@@ -283,7 +282,7 @@ def get_external_specific_assignments(department, email):
 
         return jsonify({
             "message": "External reviewer assignments retrieved successfully",
-            "data": assignments[email]
+            "data": assignments[id]
         }), 200
 
     except Exception as e:

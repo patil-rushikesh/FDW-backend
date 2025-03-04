@@ -884,7 +884,7 @@ def get_section_B(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 #Section C Data Adding Start here
-@app.route('/<department>/<user_id>/C', methods['POST'])
+@app.route('/<department>/<user_id>/C', methods = ['POST'])
 def handle_post_C(department, user_id):
     try:
         data = request.get_json()
