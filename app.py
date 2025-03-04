@@ -1961,7 +1961,6 @@ def handle_post_E(department, user_id):
             'total_marks': data['E']['total_marks'],
             'bullet_points': data['E']['bullet_points'],
             'verified_marks': 0,  # Default verified marks
-            'verifier_comments': "",  # Space for verifier comments
             'isVerified': False  # Verification status
         }
 
@@ -2010,7 +2009,6 @@ def get_section_E(department, user_id):
                     'total_marks': 0,
                     'bullet_points': [],
                     'verified_marks': 0,
-                    'verifier_comments': "",
                     'isVerified': False
                 }))
             return jsonify({"error": "User not found"}), 404
