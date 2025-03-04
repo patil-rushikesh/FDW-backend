@@ -479,8 +479,38 @@ def login():
     user = db_signin.find_one({"_id": data["_id"]})
     if user and bcrypt.checkpw(data["password"].encode('utf-8'), user["password"]):
         user_data = db_users.find_one({"_id": data["_id"]})
+        if not user_data:
+            return jsonify({"error": "User data not found"}), 404
+
+        # Create response data based on user type
+        response_data = {
+            "_id": user_data["_id"],
+            "name": user_data.get("full_name") if user_data.get("isExternal") else user_data.get("name"),
+            "role": user_data.get("role"),
+            "dept": user_data.get("dept"),
+            "isExternal": user_data.get("isExternal", False),
+            "email": user_data.get("email"),
+            "desg": user_data.get("desg", "Faculty")
+        }
+
+        # Add external-specific fields if user is external
+        if user_data.get("isExternal"):
+            response_data.update({
+                "specialization": user_data.get("specialization"),
+                "organization": user_data.get("organization"),
+                "facultyToReview": user_data.get("facultyToReview", [])
+            })
+        else:
+            # Add regular faculty fields
+            response_data.update({
+                "mail": user_data.get("mail"),
+                "mob": user_data.get("mob"),
+                "isInVerificationPanel": user_data.get("isInVerificationPanel", False),
+                "facultyToVerify": user_data.get("facultyToVerify", {})
+            })
+
         response = app.response_class(
-            response=dumps(user_data),
+            response=dumps(response_data),
             status=200,
             mimetype='application/json'
         )
@@ -854,7 +884,7 @@ def get_section_B(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 #Section C Data Adding Start here
-@app.route('/<department>/<user_id>/C', methods=['POST'])
+@app.route('/<department>/<user_id>/C', methods['POST'])
 def handle_post_C(department, user_id):
     try:
         data = request.get_json()
@@ -1453,12 +1483,17 @@ def fill_template_document(data, user_id, department):
             '{assSelfawardedmarks}' : str(assSelfawardedmarks),
             '{sumMarks_hod_dean}' : str(sumMarks_hod_dean),
             
+            
+            # Section E placeholders
+            # '{section_E_total}': str(data['E']['total_marks']),
+            '{section_E_total}': str(data.get('E', {}).get('total_marks', 0)),
+            
             # Grand total
-            '{total_for_C}' : str(round(data['C']['total_marks'],2)),
-            '{total_for_B}' : str(round(data['B']['total_marks'],2)),
-            '{total_for_A}' : str(data['A']['total_marks']),
-            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'],2)),
-            '{grand_total}': str(round(data['grand_total']['grand_total'],2))
+            '{total_for_C}' : str(round(data['C']['total_marks'])),
+            '{total_for_B}' : str(round(data['B']['total_marks'])),
+            '{total_for_A}' : str(round(data['A']['total_marks'])),
+            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'])),
+            '{grand_total}': str(round(data['grand_total']['grand_total']))
         })
         
         print('-----------after placeholders update-----------')
@@ -1586,6 +1621,7 @@ def generate_document(department, user_id):
             'B': user_doc.get('B', {}),
             'C': user_doc.get('C', {}),
             'D': user_doc.get('D', {}),
+            'E': user_doc.get('E', {}),
             'grand_total': grand_total_data
         }
 
