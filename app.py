@@ -680,8 +680,7 @@ def handle_post_B(department, user_id):
         
         
          # Initialize default structure for section B if not present
-        if 'B' not in data:
-            data['B'] = {}
+        
 
         # Initialize subsections with default values
         sections = {
@@ -816,24 +815,31 @@ def handle_post_B(department, user_id):
                     'marks': 0, 'verified_marks': 0
                 }
             },
-            "total_marks": 0,
-            "final_verified_marks": 0,
-            "verifier_id": ""
+            
         }
 
         # Merge incoming data with default values
         for section, default_data in sections.items():
-            if section not in data['B']:
-                data['B'][section] = default_data
+            if section not in data:
+                print(f"Adding default value for {section}")
+                data[section] = default_data
             else:
                 for category, category_data in default_data.items():
-                    if category not in data['B'][section]:
-                        data['B'][section][category] = category_data
+                    if category not in data[section]:
+                        print(f"Adding default value for {section} -> {category}")
+                        data[section][category] = category_data
                     else:
                         for field, default_value in category_data.items():
-                            if field not in data['B'][section][category]:
-                                data['B'][section][category][field] = default_value
-
+                            if field not in data[section][category]:
+                                print(f"Adding default value for {section} - {category} - {field}")
+                                data[section][category][field] = default_value
+        checkData = {"total_marks": 0,
+            "final_verified_marks": 0,
+            "verifier_id": ""}
+        for field,value in checkData.items() :
+            if field not in data:
+                print(f"{field} is not present")
+                data[field] = value
         # Rest of your existing code for database update
         collection = department_collections.get(department)
         if collection is None:
@@ -842,11 +848,12 @@ def handle_post_B(department, user_id):
         result = collection.update_one(
             {"_id": user_id},
             {"$set": {
-                "B": data['B'],
+                "B": data,
                 "isUpdated": True
             }},
             upsert=True
         )
+        print('added data in B')
 
         # Get updated document and calculate grand total
         updated_doc = collection.find_one({"_id": user_id})
@@ -857,6 +864,7 @@ def handle_post_B(department, user_id):
             {"_id": user_id},
             {"$set": {"grand_total": grand_total}}
         )
+        print('grand total updated')
         
         if result.matched_count > 0:
             message = "Data updated successfully"
@@ -869,6 +877,7 @@ def handle_post_B(department, user_id):
         }), 200
     
     except Exception as e:
+        print(f"Error updating section B: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/<department>/<user_id>/B', methods=['GET'])
@@ -1997,7 +2006,6 @@ def handle_post_E(department, user_id):
             'total_marks': data['E']['total_marks'],
             'bullet_points': data['E']['bullet_points'],
             'verified_marks': 0,  # Default verified marks
-            'verifier_comments': "",  # Space for verifier comments
             'isVerified': False  # Verification status
         }
 
@@ -2046,7 +2054,6 @@ def get_section_E(department, user_id):
                     'total_marks': 0,
                     'bullet_points': [],
                     'verified_marks': 0,
-                    'verifier_comments': "",
                     'isVerified': False
                 }))
             return jsonify({"error": "User not found"}), 404

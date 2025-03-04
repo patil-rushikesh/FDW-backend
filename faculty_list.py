@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, UTC  # Updated import
 from flask import Blueprint, Flask, jsonify
 from flask_pymongo import PyMongo
 from bson import ObjectId
@@ -16,36 +17,28 @@ mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
 
 
 def calculate_grand_total(data):
-    """Calculate grand total from all sections and determine status"""
+    """Calculate grand total and verified marks from all sections"""
     try:
         grand_total = 0
         form_status = "pending"  # Default status
 
-        # Add Section A total if exists
-        if 'A' in data and 'total_marks' in data['A']:
-            grand_total += float(data['A']['total_marks'])
-
-        # Add Section B total if exists
-        if 'B' in data and 'total_marks' in data['B']:
-            grand_total += float(data['B']['total_marks'])
-
-        # Add Section C total if exists
-        if 'C' in data and 'total_marks' in data['C']:
-            grand_total += float(data['C']['total_marks'])
-
-        # Add Section D total if exists
-        if 'D' in data and 'total_marks' in data['D']:
-            grand_total += float(data['D']['total_marks'])
+        # Add all sections total marks if they exist
+        sections = ['A', 'B', 'C', 'D', 'E']
+        for section in sections:
+            if section in data and 'total_marks' in data[section]:
+                grand_total += float(data[section]['total_marks'])
 
         return {
-            'grand_total': round(grand_total, 2),
+            'grand_total_marks': round(grand_total, 2),
+            'grand_verified_marks': 0,  # Initialize verified marks as 0
             'status': form_status
         }
 
     except Exception as e:
         print(f"Error calculating grand total: {str(e)}")
         return {
-            'grand_total': 0,
+            'grand_total_marks': 0,
+            'grand_verified_marks': 0,
             'status': "error"
         }
 
@@ -134,7 +127,20 @@ def get_total_marks(department, faculty_id):
         # Get faculty data from department collection
         faculty_data = department_collection.find_one({"_id": faculty_id})
         if not faculty_data:
-            return jsonify({"error": f"Faculty with ID {faculty_id} not found in {department} department"}), 404
+            # Initialize new faculty document if not found
+            initial_faculty_data = {
+                "_id": faculty_id,
+                "A": {"total_marks": 0, "verified_marks": 0},
+                "B": {"total_marks": 0, "verified_marks": 0},
+                "C": {"total_marks": 0, "verified_marks": 0},
+                "D": {"total_marks": 0, "verified_marks": 0},
+                "E": {"total_marks": 0, "verified_marks": 0},
+                "grand_total_marks": 0,
+                "grand_verified_marks": 0,
+                "status": "pending"
+            }
+            department_collection.insert_one(initial_faculty_data)
+            faculty_data = initial_faculty_data
 
         # Get user profile data
         user_profile = mongo.db.users.find_one({"_id": faculty_id})
@@ -144,13 +150,27 @@ def get_total_marks(department, faculty_id):
         # Calculate grand total using the provided function
         grand_total_data = calculate_grand_total(faculty_data)
         
-        # Extract section totals and B section verified marks
+        # Update the faculty data with new grand total
+        department_collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "grand_total_marks": grand_total_data["grand_total_marks"],
+                "grand_verified_marks": grand_total_data["grand_verified_marks"]
+            }}
+        )
+        
+        # Extract section totals and verified marks
         section_totals = {
             "A_total": faculty_data.get("A", {}).get("total_marks", 0),
+            "A_verified_total": faculty_data.get("A", {}).get("verified_marks", 0),
             "B_total": faculty_data.get("B", {}).get("total_marks", 0),
-            "B_verified_total": faculty_data.get("B", {}).get("final_verified_marks", 0),
+            "B_verified_total": faculty_data.get("B", {}).get("verified_marks", 0),
             "C_total": faculty_data.get("C", {}).get("total_marks", 0),
-            "D_total": faculty_data.get("D", {}).get("total_marks", 0)
+            "C_verified_total": faculty_data.get("C", {}).get("verified_marks", 0),
+            "D_total": faculty_data.get("D", {}).get("total_marks", 0),
+            "D_verified_total": faculty_data.get("D", {}).get("verified_marks", 0),
+            "E_total": faculty_data.get("E", {}).get("total_marks", 0),
+            "E_verified_total": faculty_data.get("E", {}).get("verified_marks", 0)
         }
 
         # Prepare response data
@@ -159,13 +179,113 @@ def get_total_marks(department, faculty_id):
             "name": user_profile.get("name", ""),
             "department": department,
             "section_totals": section_totals,
-            "grand_total": grand_total_data["grand_total"],
+            "grand_total_marks": grand_total_data["grand_total_marks"],
+            "grand_verified_marks": grand_total_data["grand_verified_marks"],
             "status": faculty_data.get("status", "pending")
         }
 
         return jsonify({
             "status": "success",
             "data": faculty_list
+        }), 200
+
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
+
+@faculty_list.route('/total_marks/<department>/<faculty_id>', methods=['POST'])
+def update_verified_marks(department, faculty_id):
+    try:
+        from flask import current_app as app, request
+        from datetime import datetime, UTC
+        mongo = PyMongo(app, uri=app.config["MONGO_URI"])
+        mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
+        
+        verified_data = request.get_json()
+        
+        department_collection = {
+            "AIML": mongo_fdw.db.AIML,
+            "ASH": mongo_fdw.db.ASH,
+            "Civil": mongo_fdw.db.Civil,
+            "Computer": mongo_fdw.db.Computer,
+            "Computer(Regional)": mongo_fdw.db.Computer_Regional,
+            "ENTC": mongo_fdw.db.ENTC,
+            "IT": mongo_fdw.db.IT,
+            "Mechanical": mongo_fdw.db.Mechanical
+        }.get(department)
+
+        if department_collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get existing faculty data
+        faculty_data = department_collection.find_one({"_id": faculty_id})
+        if not faculty_data:
+            return jsonify({"error": "Faculty not found"}), 404
+
+        # Calculate totals and prepare update document
+        grand_verified_total = 0
+        sections = ['A', 'B', 'C', 'D', 'E']
+        section_totals = {}
+
+        for section in sections:
+            section_data = verified_data.get(section, {})
+            verified_marks = float(section_data.get('verified_marks', 0))
+            total_marks = float(faculty_data.get(section, {}).get('total_marks', 0))
+            
+            grand_verified_total += verified_marks
+            
+            section_totals[section] = {
+                "total_marks": total_marks,
+                "verified_marks": verified_marks,
+                "section_items": section_data.get('section_items', {})
+            }
+
+        # Create grand total document
+        grand_total_doc = {
+            "_id": "grand_total",
+            "faculty_data": {
+                faculty_id: {
+                    "sections": section_totals,
+                    "section_wise_totals": {
+                        "A_total": section_totals['A']['total_marks'],
+                        "A_verified": section_totals['A']['verified_marks'],
+                        "B_total": section_totals['B']['total_marks'],
+                        "B_verified": section_totals['B']['verified_marks'],
+                        "C_total": section_totals['C']['total_marks'],
+                        "C_verified": section_totals['C']['verified_marks'],
+                        "D_total": section_totals['D']['total_marks'],
+                        "D_verified": section_totals['D']['verified_marks'],
+                        "E_total": section_totals['E']['total_marks'],
+                        "E_verified": section_totals['E']['verified_marks']
+                    },
+                    "grand_total_marks": sum(section['total_marks'] for section in section_totals.values()),
+                    "grand_verified_marks": round(grand_verified_total, 2),
+                    "status": "verified",
+                    "last_updated": datetime.now(UTC),
+                    "department": department
+                }
+            }
+        }
+
+        
+
+        # Update original faculty document
+        department_collection.update_one(
+            {"_id": faculty_id},
+            {
+                "$set": {
+                    **{f"grand_marks_{section}": section_totals[section] for section in sections},
+                    "grand_verified_marks": round(grand_verified_total, 2),
+                    "status": "verified"
+                }
+            }
+        )
+
+        return jsonify({
+            "status": "success",
+            "message": "Marks updated successfully"
         }), 200
 
     except Exception as e:
