@@ -377,6 +377,13 @@ def add_user():
             "departmentLevelPortfolio": "",
             "total_marks": 0,
             "isFirstTime": True
+        },
+        "E": {
+            "total_marks": 0,
+            "bullet_points": [],
+            "verified_marks": 0,
+            "verifier_comments": "",
+            "isVerified": False
         }
     }
             collection.insert_one(empty_doc)
@@ -505,6 +512,10 @@ def calculate_grand_total(data):
         # Add Section D total if exists
         if 'D' in data and 'total_marks' in data['D']:
             grand_total += float(data['D']['total_marks'])
+
+        # Add Section E total if exists
+        if 'E' in data and 'total_marks' in data['E']:
+            grand_total += float(data['E']['total_marks'])
 
         # Return as dict with proper structure
         return {
@@ -1909,6 +1920,104 @@ from dean_associates import dean_associates
 
 # Add this line with your other blueprint registrations
 app.register_blueprint(dean_associates)
+
+from externals import externals
+
+# Add this line with your other blueprint registrations
+app.register_blueprint(externals)
+
+@app.route('/<department>/<user_id>/E', methods=['POST'])
+def handle_post_E(department, user_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON data"}), 400
+
+        # Get department collection
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        
+        # Verify user exists in department
+        lookup = collection.find_one({"_id": "lookup"}).get("data")
+        if lookup is None:
+            return jsonify({"error": "Invalid department"}), 400
+        user = lookup.get(user_id)
+        if user is None:
+            return jsonify({"error": "Invalid user"}), 400
+
+        # Initialize default structure for section E
+        if 'E' not in data:
+            data['E'] = {}
+
+        # Validate required fields
+        if 'total_marks' not in data['E']:
+            return jsonify({"error": "Missing required field: total_marks"}), 400
+        if 'bullet_points' not in data['E']:
+            return jsonify({"error": "Missing required field: bullet_points"}), 400
+
+        # Create section E structure with default values
+        section_E = {
+            'total_marks': data['E']['total_marks'],
+            'bullet_points': data['E']['bullet_points'],
+            'verified_marks': 0,  # Default verified marks
+            'verifier_comments': "",  # Space for verifier comments
+            'isVerified': False  # Verification status
+        }
+
+        # Update the document
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "E": section_E,
+                "isUpdated": True,
+                "status": "pending"
+            }},
+            upsert=True
+        )
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        calculated_data = calculate_grand_total(updated_doc)
+
+        # Update grand total and status
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "grand_total": calculated_data['grand_total'],
+                "status": calculated_data['status']
+            }}
+        )
+
+        return jsonify({
+            "message": "Data updated successfully" if result.matched_count > 0 else "Data inserted successfully",
+            "grand_total": calculated_data['grand_total'],
+            "status": calculated_data['status']
+        }), 200
+
+    except Exception as e:
+        print(f"Error updating section E: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/E', methods=['GET'])
+def get_section_E(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is not None:
+            user = collection.find_one({"_id": user_id})
+            if user:
+                return jsonify(user.get("E", {
+                    'total_marks': 0,
+                    'bullet_points': [],
+                    'verified_marks': 0,
+                    'verifier_comments': "",
+                    'isVerified': False
+                }))
+            return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Invalid department"}), 400
+    except Exception as e:
+        print(f"Error retrieving section E: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
