@@ -901,8 +901,7 @@ def handle_post_C(department, user_id):
             return jsonify({"error": "Invalid JSON data"}), 400
 
         # Initialize default structure for section C if not present
-        if 'C' not in data:
-            data['C'] = {}
+        
 
         # Initialize subsections with default values
         sections = {
@@ -940,25 +939,28 @@ def handle_post_C(department, user_id):
                     'marks': 0
                 }
             },
-            'total_marks': 0
+           
         }
 
         # Merge incoming data with default values
         for section, default_data in sections.items():
-            if section not in data['C']:
-                data['C'][section] = default_data
+            if section not in data:
+                data[section] = default_data
             else:
                 for category, category_data in default_data.items():
                     if isinstance(category_data, dict):
-                        if category not in data['C'][section]:
-                            data['C'][section][category] = category_data
+                        if category not in data[section]:
+                            data[section][category] = category_data
                         else:
                             for field, default_value in category_data.items():
-                                if field not in data['C'][section][category]:
-                                    data['C'][section][category][field] = default_value
+                                if field not in data[section][category]:
+                                    data[section][category][field] = default_value
                     else:
-                        if category not in data['C'][section]:
-                            data['C'][section][category] = category_data
+                        if category not in data[section]:
+                            data[section][category] = category_data
+                            
+        if  'total_marks' not in data:
+            data['total_marks'] = 0
 
         # Update document with merged data
         collection = department_collections.get(department)
@@ -968,7 +970,7 @@ def handle_post_C(department, user_id):
         result = collection.update_one(
             {"_id": user_id},
             {"$set": {
-                "C": data['C'],
+                "C": data,
                 "isUpdated": True
             }},
             upsert=True
@@ -1155,11 +1157,11 @@ def fill_template_document(data, user_id, department):
             Assis_A_total_marks = (data.get('A', {}).get('total_marks', 0))
             
         if role == 'Associate Professor':
-            section_a_marks = section_a_marks / 0.818
+            section_a_marks = section_a_marks * 0.818
             Assoc_A =  section_a_marks
             Assoc_A_total_marks = (data.get('A', {}).get('total_marks', 0))
         elif role == 'Professor':
-            section_a_marks = section_a_marks / 0.68        
+            section_a_marks = section_a_marks * 0.68        
             Prof_A =  section_a_marks
             Prof_A_total_marks = (data.get('A', {}).get('total_marks', 0))
 
