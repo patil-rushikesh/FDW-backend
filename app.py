@@ -138,15 +138,254 @@ def add_user():
 
             # Create empty document for the user
             empty_doc = {
-                "_id": data["_id"],
-                "status": "pending",
-                "isUpdated": False,
-                "grand_total": 0,
-                "A": {},
-                "B": {},
-                "C": {},
-                "D": {}
-            }
+        "_id": data["_id"],
+        "status": "pending",
+        "isUpdated": False,
+        "grand_total": {
+            "grand_total": 0,
+            "status": "pending"
+        },
+        "A": {
+            "1": {
+                "courses": {},
+                "total_marks": 0
+            },
+            "2": {
+                "courses": {},
+                "semesterScores": {
+                    "Sem I": 0,
+                    "Sem II": 0
+                },
+                "total_marks": 0
+            },
+            "3": {
+                "elearningInstances": 0,
+                "total_marks": 0
+            },
+            "4": {
+                "courses": {},
+                "total_marks": 0
+            },
+            "5": {
+                "weeklyLoadSem1": 0,
+                "weeklyLoadSem2": 0,
+                "adminResponsibility": 0,
+                "cadre": data["role"],
+                "total_marks": 0
+            },
+            "6": {
+                "projectsGuided": 0,
+                "total_marks": 0
+            },
+            "7": {
+                "courses": {},
+                "total_marks": 0
+            },
+            "8": {
+                "ptgMeetings": 0,
+                "total_marks": 0
+            },
+            "total_marks": 0
+        },
+        "B": {
+            "1": {
+                "journalPapers": {
+                    "sciCount": 0, "sciProof": "", "ver_sciMarks": 0,
+                    "esciCount": 0, "esciProof": "", "ver_esciMarks": 0,
+                    "scopusCount": 0, "scopusProof": "", "ver_scopusMarks": 0,
+                    "ugcCareCount": 0, "ugcCareProof": "", "ver_ugcCareMarks": 0,
+                    "otherCount": 0, "otherProof": "", "ver_otherMarks": 0,
+                    "marks": 0, "verified_marks": 0
+                }
+            },
+            "2": {
+                "conferencePapers": {
+                    "scopusWosCount": 0, "scopusWosProof": "", "ver_scopusWosMarks": 0,
+                    "otherCount": 0, "otherProof": "", "ver_otherMarks": 0,
+                    "marks": 0, "verified_marks": 0
+                }
+            },
+            '3': {
+                'bookChapters': {
+                    'scopusWosCount': 0, 'scopusWosProof': '', 'ver_scopusWosMarks': 0,
+                    'otherCount': 0, 'otherProof': '', 'ver_otherMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '4': {
+                'books': {
+                    'scopusWosCount': 0, 'scopusWosProof': '', 'ver_scopusWosMarks': 0,
+                    'nonIndexedCount': 0, 'nonIndexedProof': '', 'ver_nonIndexedMarks': 0,
+                    'localCount': 0, 'localProof': '', 'ver_localMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '5': {
+                'citations': {
+                    'webOfScienceCount': 0, 'webOfScienceProof': '', 'ver_webOfScienceMarks': 0,
+                    'scopusCount': 0, 'scopusProof': '', 'ver_scopusMarks': 0,
+                    'googleScholarCount': 0, 'googleScholarProof': '', 'ver_googleScholarMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '6': {
+                'copyrightIndividual': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '7': {
+                'copyrightInstitute': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '8': {
+                'patentIndividual': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'publishedCount': 0, 'publishedProof': '', 'ver_publishedMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '9': {
+                'patentInstitute': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'publishedCount': 0, 'publishedProof': '', 'ver_publishedMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '10': {
+                'researchGrants': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '11': {
+                'trainingPrograms': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '12': {
+                'nonResearchGrants': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '13': {
+                'productDevelopment': {
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'developedCount': 0, 'developedProof': '', 'ver_developedMarks': 0,
+                    'pocCount': 0, 'pocProof': '', 'ver_pocMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '14': {
+                'startup': {
+                    'revenueFiftyKCount': 0, 'revenueFiftyKProof': '', 'ver_revenueFiftyKMarks': 0,
+                    'fundsFiveLakhsCount': 0, 'fundsFiveLakhsProof': '', 'ver_fundsFiveLakhsMarks': 0,
+                    'productsCount': 0, 'productsProof': '', 'ver_productsMarks': 0,
+                    'pocCount': 0, 'pocProof': '', 'ver_pocMarks': 0,
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '15': {
+                'awardsAndFellowships': {
+                    'internationalAwardsCount': 0, 'internationalAwardsProof': '', 'ver_internationalAwardsMarks': 0,
+                    'governmentAwardsCount': 0, 'governmentAwardsProof': '', 'ver_governmentAwardsMarks': 0,
+                    'nationalAwardsCount': 0, 'nationalAwardsProof': '', 'ver_nationalAwardsMarks': 0,
+                    'internationalFellowshipsCount': 0, 'internationalFellowshipsProof': '', 'ver_internationalFellowshipsMarks': 0,
+                    'nationalFellowshipsCount': 0, 'nationalFellowshipsProof': '', 'ver_nationalFellowshipsMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '16': {
+                'industryInteraction': {
+                    'moUsCount': 0, 'moUsProof': '', 'ver_moUsMarks': 0,
+                    'collaborationCount': 0, 'collaborationProof': '', 'ver_collaborationMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '17': {
+                'internshipPlacement': {
+                    'offersCount': 0, 'offersProof': '', 'ver_offersMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            "total_marks": 0,
+            "final_verified_marks": 0,
+            "verifier_id": ""
+        
+        },
+        "C": {
+            "1": {
+                "qualification": {
+                    "pdfCompleted": False,
+                    "pdfOngoing": False,
+                    "phdAwarded": False,
+                    "marks": 0
+                }
+            },
+            "2": {
+                "trainingAttended": {
+                    "twoWeekProgram": 0,
+                    "oneWeekProgram": 0,
+                    "twoToFiveDayProgram": 0,
+                    "oneDayProgram": 0,
+                    "marks": 0
+                }
+            },
+            "3": {
+                "trainingOrganized": {
+                    "twoWeekProgram": 0,
+                    "oneWeekProgram": 0,
+                    "twoToFiveDayProgram": 0,
+                    "oneDayProgram": 0,
+                    "marks": 0
+                }
+            },
+            "4": {
+                "phdGuided": {
+                    "degreesAwarded": 0,
+                    "thesisSubmitted": 0,
+                    "scholarsGuiding": 0,
+                    "marks": 0
+                }
+            },
+            "total_marks": 0
+        },
+        "D": {
+            "portfolioType": "",
+            "selfAwardedMarks": 0,
+            "deanMarks": 0,
+            "hodMarks": 0,
+            "isMarkHOD": False,
+            "isMarkDean": False,
+            "isAdministrativeRole": False,
+            "administrativeRole": "",
+            "adminSelfAwardedMarks": 0,
+            "directorMarks": 0,
+            "adminDeanMarks": 0,
+            "instituteLevelPortfolio": "",
+            "departmentLevelPortfolio": "",
+            "total_marks": 0,
+            "isFirstTime": True
+        },
+        "E": {
+            "total_marks": 0,
+            "bullet_points": [],
+            "verified_marks": 0,
+            "verifier_comments": "",
+            "isVerified": False
+        }
+    }
             collection.insert_one(empty_doc)
 
             return jsonify({"message": f"User added successfully to {department}"}), 201
@@ -226,7 +465,7 @@ def migrate_users():
     return jsonify({"message": f"Migrated {migrated_count} users to signin collection"}), 200
 
 # User login
-@app.route('/login', methods=['POST', 'OPTIONS'])  # Added OPTIONS method
+@app.route('/login', methods=['POST', 'OPTIONS'])
 def login():
     # Handle preflight request
     if request.method == 'OPTIONS':
@@ -240,8 +479,38 @@ def login():
     user = db_signin.find_one({"_id": data["_id"]})
     if user and bcrypt.checkpw(data["password"].encode('utf-8'), user["password"]):
         user_data = db_users.find_one({"_id": data["_id"]})
+        if not user_data:
+            return jsonify({"error": "User data not found"}), 404
+
+        # Create response data based on user type
+        response_data = {
+            "_id": user_data["_id"],
+            "name": user_data.get("full_name") if user_data.get("isExternal") else user_data.get("name"),
+            "role": user_data.get("role"),
+            "dept": user_data.get("dept"),
+            "isExternal": user_data.get("isExternal", False),
+            "email": user_data.get("email"),
+            "desg": user_data.get("desg", "Faculty")
+        }
+
+        # Add external-specific fields if user is external
+        if user_data.get("isExternal"):
+            response_data.update({
+                "specialization": user_data.get("specialization"),
+                "organization": user_data.get("organization"),
+                "facultyToReview": user_data.get("facultyToReview", [])
+            })
+        else:
+            # Add regular faculty fields
+            response_data.update({
+                "mail": user_data.get("mail"),
+                "mob": user_data.get("mob"),
+                "isInVerificationPanel": user_data.get("isInVerificationPanel", False),
+                "facultyToVerify": user_data.get("facultyToVerify", {})
+            })
+
         response = app.response_class(
-            response=dumps(user_data),
+            response=dumps(response_data),
             status=200,
             mimetype='application/json'
         )
@@ -274,8 +543,13 @@ def calculate_grand_total(data):
         if 'D' in data and 'total_marks' in data['D']:
             grand_total += float(data['D']['total_marks'])
 
+        # Add Section E total if exists
+        if 'E' in data and 'total_marks' in data['E']:
+            grand_total += float(data['E']['total_marks'])
+
+        # Return as dict with proper structure
         return {
-            'grand_total': round(grand_total, 2),
+            'grand_total': grand_total,
             'status': form_status
         }
 
@@ -305,8 +579,27 @@ def handle_post_A(department, user_id):
         user = lookup.get(user_id)
         if user is None:
             return jsonify({"error": "Invalid user"}), 400
-        
+        print(data)
         # Update the document for the given user_id
+        if 'total_marks' not in data['1']:
+            data['1']['total_marks'] = 0
+        if 'total_marks' not in data['2']:
+            data['2']['total_marks'] = 0
+        if 'total_marks' not in data['3']:
+            data['3']['total_marks'] = 0
+        if 'total_marks' not in data['4']:
+            data['4']['total_marks'] = 0
+        if 'total_marks' not in data['5']:
+            data['5']['total_marks'] = 0
+        if 'total_marks' not in data['6']:
+            data['6']['total_marks'] = 0
+        if 'total_marks' not in data['7']:
+            data['7']['total_marks'] = 0
+        if 'total_marks' not in data['8']:
+            data['8']['total_marks'] = 0
+        if 'total_marks' not in data:
+            data['total_marks'] = 0
+        
         result = collection.update_one(
             {"_id": user_id},
             {"$set": {
@@ -342,6 +635,7 @@ def handle_post_A(department, user_id):
         }), 200
 
     except Exception as e:
+        print(f"Error updating section A: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/<department>/<user_id>/A', methods=['GET'])
@@ -383,14 +677,183 @@ def handle_post_B(department, user_id):
         if user is None:
             return jsonify({"error": "Invalid user"}), 400
         
-        # Update the document for the given user_id
+        
+        
+         # Initialize default structure for section B if not present
+        
+
+        # Initialize subsections with default values
+        sections = {
+            '1': {
+                'journalPapers': {
+                    'sciCount': 0, 'sciProof': '', 'ver_sciMarks': 0,
+                    'esciCount': 0, 'esciProof': '', 'ver_esciMarks': 0,
+                    'scopusCount': 0, 'scopusProof': '', 'ver_scopusMarks': 0,
+                    'ugcCareCount': 0, 'ugcCareProof': '', 'ver_ugcCareMarks': 0,
+                    'otherCount': 0, 'otherProof': '', 'ver_otherMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '2': {
+                'conferencePapers': {
+                    'scopusWosCount': 0, 'scopusWosProof': '', 'ver_scopusWosMarks': 0,
+                    'otherCount': 0, 'otherProof': '', 'ver_otherMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '3': {
+                'bookChapters': {
+                    'scopusWosCount': 0, 'scopusWosProof': '', 'ver_scopusWosMarks': 0,
+                    'otherCount': 0, 'otherProof': '', 'ver_otherMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '4': {
+                'books': {
+                    'scopusWosCount': 0, 'scopusWosProof': '', 'ver_scopusWosMarks': 0,
+                    'nonIndexedCount': 0, 'nonIndexedProof': '', 'ver_nonIndexedMarks': 0,
+                    'localCount': 0, 'localProof': '', 'ver_localMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '5': {
+                'citations': {
+                    'webOfScienceCount': 0, 'webOfScienceProof': '', 'ver_webOfScienceMarks': 0,
+                    'scopusCount': 0, 'scopusProof': '', 'ver_scopusMarks': 0,
+                    'googleScholarCount': 0, 'googleScholarProof': '', 'ver_googleScholarMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '6': {
+                'copyrightIndividual': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '7': {
+                'copyrightInstitute': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '8': {
+                'patentIndividual': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'publishedCount': 0, 'publishedProof': '', 'ver_publishedMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '9': {
+                'patentInstitute': {
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'publishedCount': 0, 'publishedProof': '', 'ver_publishedMarks': 0,
+                    'grantedCount': 0, 'grantedProof': '', 'ver_grantedMarks': 0,
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '10': {
+                'researchGrants': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '11': {
+                'trainingPrograms': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '12': {
+                'nonResearchGrants': {
+                    'amount': 0, 'proof': '', 'ver_amountMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '13': {
+                'productDevelopment': {
+                    'commercializedCount': 0, 'commercializedProof': '', 'ver_commercializedMarks': 0,
+                    'developedCount': 0, 'developedProof': '', 'ver_developedMarks': 0,
+                    'pocCount': 0, 'pocProof': '', 'ver_pocMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '14': {
+                'startup': {
+                    'revenueFiftyKCount': 0, 'revenueFiftyKProof': '', 'ver_revenueFiftyKMarks': 0,
+                    'fundsFiveLakhsCount': 0, 'fundsFiveLakhsProof': '', 'ver_fundsFiveLakhsMarks': 0,
+                    'productsCount': 0, 'productsProof': '', 'ver_productsMarks': 0,
+                    'pocCount': 0, 'pocProof': '', 'ver_pocMarks': 0,
+                    'registeredCount': 0, 'registeredProof': '', 'ver_registeredMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '15': {
+                'awardsAndFellowships': {
+                    'internationalAwardsCount': 0, 'internationalAwardsProof': '', 'ver_internationalAwardsMarks': 0,
+                    'governmentAwardsCount': 0, 'governmentAwardsProof': '', 'ver_governmentAwardsMarks': 0,
+                    'nationalAwardsCount': 0, 'nationalAwardsProof': '', 'ver_nationalAwardsMarks': 0,
+                    'internationalFellowshipsCount': 0, 'internationalFellowshipsProof': '', 'ver_internationalFellowshipsMarks': 0,
+                    'nationalFellowshipsCount': 0, 'nationalFellowshipsProof': '', 'ver_nationalFellowshipsMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '16': {
+                'industryInteraction': {
+                    'moUsCount': 0, 'moUsProof': '', 'ver_moUsMarks': 0,
+                    'collaborationCount': 0, 'collaborationProof': '', 'ver_collaborationMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            '17': {
+                'internshipPlacement': {
+                    'offersCount': 0, 'offersProof': '', 'ver_offersMarks': 0,
+                    'marks': 0, 'verified_marks': 0
+                }
+            },
+            
+        }
+
+        # Merge incoming data with default values
+        for section, default_data in sections.items():
+            if section not in data:
+                print(f"Adding default value for {section}")
+                data[section] = default_data
+            else:
+                for category, category_data in default_data.items():
+                    if category not in data[section]:
+                        print(f"Adding default value for {section} -> {category}")
+                        data[section][category] = category_data
+                    else:
+                        for field, default_value in category_data.items():
+                            if field not in data[section][category]:
+                                print(f"Adding default value for {section} - {category} - {field}")
+                                data[section][category][field] = default_value
+        checkData = {"total_marks": 0,
+            "final_verified_marks": 0,
+            "verifier_id": ""}
+        for field,value in checkData.items() :
+            if field not in data:
+                print(f"{field} is not present")
+                data[field] = value
+        # Rest of your existing code for database update
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"B": data, 
-                      "isUpdated": True  # Set flag when data is updated
-               }},
+            {"$set": {
+                "B": data,
+                "isUpdated": True
+            }},
             upsert=True
         )
+        print('added data in B')
 
         # Get updated document and calculate grand total
         updated_doc = collection.find_one({"_id": user_id})
@@ -401,6 +864,7 @@ def handle_post_B(department, user_id):
             {"_id": user_id},
             {"$set": {"grand_total": grand_total}}
         )
+        print('grand total updated')
         
         if result.matched_count > 0:
             message = "Data updated successfully"
@@ -413,6 +877,7 @@ def handle_post_B(department, user_id):
         }), 200
     
     except Exception as e:
+        print(f"Error updating section B: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/<department>/<user_id>/B', methods=['GET'])
@@ -428,59 +893,102 @@ def get_section_B(department, user_id):
         return jsonify({"error": str(e)}), 500
 
 #Section C Data Adding Start here
-@app.route('/<department>/<user_id>/C', methods=['POST'])
+@app.route('/<department>/<user_id>/C', methods = ['POST'])
 def handle_post_C(department, user_id):
     try:
         data = request.get_json()
         if not data:
             return jsonify({"error": "Invalid JSON data"}), 400
+
+        # Initialize default structure for section C if not present
         
-        # Access the collection named after the department
+
+        # Initialize subsections with default values
+        sections = {
+            '1': {
+                'qualification': {
+                    'pdfCompleted': False,
+                    'pdfOngoing': False,
+                    'phdAwarded': False,
+                    'marks': 0
+                }
+            },
+            '2': {
+                'trainingAttended': {
+                    'twoWeekProgram': 0,
+                    'oneWeekProgram': 0,
+                    'twoToFiveDayProgram': 0,
+                    'oneDayProgram': 0,
+                    'marks': 0
+                }
+            },
+            '3': {
+                'trainingOrganized': {
+                    'twoWeekProgram': 0,
+                    'oneWeekProgram': 0,
+                    'twoToFiveDayProgram': 0,
+                    'oneDayProgram': 0,
+                    'marks': 0
+                }
+            },
+            '4': {
+                'phdGuided': {
+                    'degreesAwarded': 0,
+                    'thesisSubmitted': 0,
+                    'scholarsGuiding': 0,
+                    'marks': 0
+                }
+            },
+           
+        }
+
+        # Merge incoming data with default values
+        for section, default_data in sections.items():
+            if section not in data:
+                data[section] = default_data
+            else:
+                for category, category_data in default_data.items():
+                    if isinstance(category_data, dict):
+                        if category not in data[section]:
+                            data[section][category] = category_data
+                        else:
+                            for field, default_value in category_data.items():
+                                if field not in data[section][category]:
+                                    data[section][category][field] = default_value
+                    else:
+                        if category not in data[section]:
+                            data[section][category] = category_data
+                            
+        if  'total_marks' not in data:
+            data['total_marks'] = 0
+
+        # Update document with merged data
         collection = department_collections.get(department)
-        
-        #first we have to verify from lookup that the user exist in that department or not then only add data
-        
-        
         if collection is None:
             return jsonify({"error": "Invalid department"}), 400
-        
-        lookup = collection.find_one({"_id": "lookup"}).get("data")
-        print(lookup)
-        if lookup is None:
-            return jsonify({"error": "Invalid department"}), 400
-        user = lookup.get(user_id)
-        if user is None:
-            return jsonify({"error": "Invalid user"}), 400
-        
-        # Update the document for the given user_id
+
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"C": data, 
-                      "isUpdated": True  # Set flag when data is updated
-               }},
+            {"$set": {
+                "C": data,
+                "isUpdated": True
+            }},
             upsert=True
         )
 
-        # Get updated document and calculate grand total
+        # Update grand total
         updated_doc = collection.find_one({"_id": user_id})
         grand_total = calculate_grand_total(updated_doc)
-
-        # Update grand total
         collection.update_one(
             {"_id": user_id},
             {"$set": {"grand_total": grand_total}}
         )
-        
-        if result.matched_count > 0:
-            message = "Data updated successfully"
-        else:
-            message = "Data inserted successfully"
-        
+
         return jsonify({
-            "message": message,
+            "message": "Data updated successfully" if result.matched_count > 0 else "Data inserted successfully",
             "grand_total": grand_total
         }), 200
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -503,53 +1011,62 @@ def handle_post_D(department, user_id):
         data = request.get_json()
         if not data:
             return jsonify({"error": "Invalid JSON data"}), 400
-        
-        # Access the collection named after the department
+
+        # Initialize default structure for section D if not present
+        if 'D' not in data:
+            data['D'] = {}
+
+        # Initialize with default values
+        default_data = {
+            'portfolioType': '',
+            'selfAwardedMarks': 0,
+            'deanMarks': 0,
+            'hodMarks': 0,
+            'isMarkHOD': False,
+            'isMarkDean': False,
+            'isAdministrativeRole': False,
+            'administrativeRole': '',
+            'adminSelfAwardedMarks': 0,
+            'directorMarks': 0,
+            'adminDeanMarks': 0,
+            'instituteLevelPortfolio': '',
+            'departmentLevelPortfolio': '',
+            'total_marks': 0,
+            'isFirstTime': True
+        }
+
+        # Merge incoming data with default values
+        for field, default_value in default_data.items():
+            if field not in data['D']:
+                data['D'][field] = default_value
+
+        # Update document with merged data
         collection = department_collections.get(department)
-        
-        #first we have to verify from lookup that the user exist in that department or not then only add data
-        
-        
         if collection is None:
             return jsonify({"error": "Invalid department"}), 400
-        
-        lookup = collection.find_one({"_id": "lookup"}).get("data")
-        print(lookup)
-        if lookup is None:
-            return jsonify({"error": "Invalid department"}), 400
-        user = lookup.get(user_id)
-        if user is None:
-            return jsonify({"error": "Invalid user"}), 400
-        
-        # Update the document for the given user_id
+
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"D": data, 
-                      "isUpdated": True  # Set flag when data is updated
-               }},
+            {"$set": {
+                "D": data['D'],
+                "isUpdated": True
+            }},
             upsert=True
         )
 
-        # Get updated document and calculate grand total
+        # Update grand total
         updated_doc = collection.find_one({"_id": user_id})
         grand_total = calculate_grand_total(updated_doc)
-
-        # Update grand total
         collection.update_one(
             {"_id": user_id},
             {"$set": {"grand_total": grand_total}}
         )
-        
-        if result.matched_count > 0:
-            message = "Data updated successfully"
-        else:
-            message = "Data inserted successfully"
-        
+
         return jsonify({
-            "message": message,
+            "message": "Data updated successfully" if result.matched_count > 0 else "Data inserted successfully",
             "grand_total": grand_total
         }), 200
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -640,11 +1157,11 @@ def fill_template_document(data, user_id, department):
             Assis_A_total_marks = (data.get('A', {}).get('total_marks', 0))
             
         if role == 'Associate Professor':
-            section_a_marks = section_a_marks / 0.818
+            section_a_marks = section_a_marks * 0.818
             Assoc_A =  section_a_marks
             Assoc_A_total_marks = (data.get('A', {}).get('total_marks', 0))
         elif role == 'Professor':
-            section_a_marks = section_a_marks / 0.68        
+            section_a_marks = section_a_marks * 0.68        
             Prof_A =  section_a_marks
             Prof_A_total_marks = (data.get('A', {}).get('total_marks', 0))
 
@@ -728,7 +1245,7 @@ def fill_template_document(data, user_id, department):
         
         
         
-        
+        print('-----------before placeholders update-----------')
         
         placeholders.update({
             # Section A placeholders
@@ -966,8 +1483,8 @@ def fill_template_document(data, user_id, department):
             '{Assis_C_total_marks}': str(Assis_C_total_marks),
             
             # New section D (Portfolio details)
-            '{Department_portfolio}': data['D']['departmentLevelPortfolio'],
-            '{Institute_Portfolio}': data['D']['instituteLevelPortfolio'],
+            '{Department_portfolio}': "Not added" if not data['D'].get('departmentLevelPortfolio') else data['D']['departmentLevelPortfolio'],
+            '{Institute_Portfolio}': "Not added" if not data['D'].get('instituteLevelPortfolio') else data['D']['instituteLevelPortfolio'],
             '{self_awarded_marks}': str(self_awarded_marks),
             '{hodMarks}': str(hod_marks),
             '{section_d_total}': str(total_marks_D),
@@ -975,14 +1492,22 @@ def fill_template_document(data, user_id, department):
             '{assDeanHODMarks}' : str(assDeanHODMarks),
             '{assTotalMarks}' : str(assTotalMarks),
             '{assSelfawardedmarks}' : str(assSelfawardedmarks),
+            '{sumMarks_hod_dean}' : str(sumMarks_hod_dean),
+            
+            
+            # Section E placeholders
+            # '{section_E_total}': str(data['E']['total_marks']),
+            '{section_E_total}': str(data.get('E', {}).get('total_marks', 0)),
             
             # Grand total
-            '{total_for_C}' : str(round(data['C']['total_marks'],2)),
-            '{total_for_B}' : str(round(data['B']['total_marks'],2)),
-            '{total_for_A}' : str(round(data['A']['total_marks'],2)),
-            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'],2)),
-            '{grand_total}': str(round(data['grand_total']['grand_total'],2))
+            '{total_for_C}' : str(round(data['C']['total_marks'])),
+            '{total_for_B}' : str(round(data['B']['total_marks'])),
+            '{total_for_A}' : str(round(data['A']['total_marks'])),
+            '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'])),
+            '{grand_total}': str(round(data['grand_total']['grand_total']))
         })
+        
+        print('-----------after placeholders update-----------')
         # Replace placeholders in paragraphs and tables
         for paragraph in doc.paragraphs:
             for placeholder, value in placeholders.items():
@@ -1094,13 +1619,21 @@ def generate_document(department, user_id):
         # Initialize COM for PDF generation
         pythoncom.CoInitialize()
 
-        # Prepare data for document generation
+        # Prepare data for document generation with proper grand_total structure
+        user_doc = collection.find_one({"_id": user_id})
+        grand_total_data = user_doc.get('grand_total', {'grand_total': 0, 'status': 'pending'})
+        
+        # Ensure grand_total is in correct format
+        if isinstance(grand_total_data, (int, float)):
+            grand_total_data = {'grand_total': float(grand_total_data), 'status': 'pending'}
+        
         data = {
             'A': user_doc.get('A', {}),
             'B': user_doc.get('B', {}),
             'C': user_doc.get('C', {}),
             'D': user_doc.get('D', {}),
-            'grand_total': user_doc.get('grand_total',{'grand_total':0}),
+            'E': user_doc.get('E', {}),
+            'grand_total': grand_total_data
         }
 
         doc = fill_template_document(data, user_id, department)
@@ -1434,6 +1967,102 @@ from dean_associates import dean_associates
 
 # Add this line with your other blueprint registrations
 app.register_blueprint(dean_associates)
+
+from externals import externals
+
+# Add this line with your other blueprint registrations
+app.register_blueprint(externals)
+
+@app.route('/<department>/<user_id>/E', methods=['POST'])
+def handle_post_E(department, user_id):
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "Invalid JSON data"}), 400
+
+        # Get department collection
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        
+        # Verify user exists in department
+        lookup = collection.find_one({"_id": "lookup"}).get("data")
+        if lookup is None:
+            return jsonify({"error": "Invalid department"}), 400
+        user = lookup.get(user_id)
+        if user is None:
+            return jsonify({"error": "Invalid user"}), 400
+
+        # Initialize default structure for section E
+        if 'E' not in data:
+            data['E'] = {}
+
+        # Validate required fields
+        if 'total_marks' not in data['E']:
+            return jsonify({"error": "Missing required field: total_marks"}), 400
+        if 'bullet_points' not in data['E']:
+            return jsonify({"error": "Missing required field: bullet_points"}), 400
+
+        # Create section E structure with default values
+        section_E = {
+            'total_marks': data['E']['total_marks'],
+            'bullet_points': data['E']['bullet_points'],
+            'verified_marks': 0,  # Default verified marks
+            'isVerified': False  # Verification status
+        }
+
+        # Update the document
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "E": section_E,
+                "isUpdated": True,
+                "status": "pending"
+            }},
+            upsert=True
+        )
+
+        # Get updated document and calculate grand total
+        updated_doc = collection.find_one({"_id": user_id})
+        calculated_data = calculate_grand_total(updated_doc)
+
+        # Update grand total and status
+        collection.update_one(
+            {"_id": user_id},
+            {"$set": {
+                "grand_total": calculated_data['grand_total'],
+                "status": calculated_data['status']
+            }}
+        )
+
+        return jsonify({
+            "message": "Data updated successfully" if result.matched_count > 0 else "Data inserted successfully",
+            "grand_total": calculated_data['grand_total'],
+            "status": calculated_data['status']
+        }), 200
+
+    except Exception as e:
+        print(f"Error updating section E: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/E', methods=['GET'])
+def get_section_E(department, user_id):
+    try:
+        collection = department_collections.get(department)
+        if collection is not None:
+            user = collection.find_one({"_id": user_id})
+            if user:
+                return jsonify(user.get("E", {
+                    'total_marks': 0,
+                    'bullet_points': [],
+                    'verified_marks': 0,
+                    'isVerified': False
+                }))
+            return jsonify({"error": "User not found"}), 404
+        return jsonify({"error": "Invalid department"}), 400
+    except Exception as e:
+        print(f"Error retrieving section E: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
