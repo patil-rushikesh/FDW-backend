@@ -164,7 +164,7 @@ def get_total_marks(department, faculty_id):
             "A_total": faculty_data.get("A", {}).get("total_marks", 0),
             "A_verified_total": faculty_data.get("A", {}).get("verified_marks", 0),
             "B_total": faculty_data.get("B", {}).get("total_marks", 0),
-            "B_verified_total": faculty_data.get("B", {}).get("verified_marks", 0),
+            "B_verified_total": faculty_data.get("B", {}).get("final_verified_marks", 0),
             "C_total": faculty_data.get("C", {}).get("total_marks", 0),
             "C_verified_total": faculty_data.get("C", {}).get("verified_marks", 0),
             "D_total": faculty_data.get("D", {}).get("total_marks", 0),
