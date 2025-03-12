@@ -190,6 +190,7 @@ def get_total_marks(department, faculty_id):
         }), 200
 
     except Exception as e:
+        print('error', str(e))
         return jsonify({
             "status": "error",
             "message": str(e)

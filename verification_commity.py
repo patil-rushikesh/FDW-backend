@@ -51,8 +51,46 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
 
             committee_ids = data['committee_ids']
             committee_data = {}
+            
+            # Check if this is a forced update (for edits)
+            force_update = request.args.get('force', 'false').lower() == 'true'
+            
+            # Get explicit list of deleted verifiers if provided
+            deleted_verifiers = data.get('deleted_verifiers', [])
+            
+            # Get current committee to identify removed members
+            existing_committee = collection.find_one({"_id": "verification_team"})
+            existing_committee_heads = []
+            if existing_committee:
+                for key in existing_committee:
+                    if key != "_id":
+                        head_id = key.split(" ")[0]  # Extract ID part
+                        existing_committee_heads.append(head_id)
 
+            # Find committee heads that were removed
+            # Include both those not in the new list and those explicitly marked as deleted
+            removed_heads = [head_id for head_id in existing_committee_heads 
+                            if head_id not in committee_ids or head_id in deleted_verifiers]
+            
+            # Log removed heads to debug
+            print(f"Removed committee heads: {removed_heads}")
+            
+            # Reset removed committee heads
+            for head_id in removed_heads:
+                db_users.update_one(
+                    {"_id": head_id},
+                    {
+                        "$set": {"isInVerificationPanel": False},
+                        "$unset": {f"facultyToVerify.{department}": ""}
+                    }
+                )
+
+            # Set up new committee structure
             for committee_id in committee_ids:
+                # Skip if this ID is in the deleted list
+                if committee_id in deleted_verifiers:
+                    continue
+                    
                 head = db_users.find_one({"_id": committee_id})
                 if not head:
                     return jsonify({"error": f"Committee head {committee_id} not found"}), 404
@@ -71,13 +109,33 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
                 committee_key = f"{head['_id']} ({head['name']})"
                 committee_data[committee_key] = []
 
-            result = collection.update_one(
-                {"_id": "verification_team"},
-                {"$set": committee_data},
-                upsert=True
-            )
+            # If editing, try to preserve faculty assignments for remaining verifiers
+            if existing_committee:
+                for committee_key, faculty_list in existing_committee.items():
+                    if committee_key != "_id":
+                        committee_id = committee_key.split(" ")[0]
+                        if committee_id in committee_ids and committee_id not in deleted_verifiers:
+                            # Find the new key for this committee head (in case name changed)
+                            head = db_users.find_one({"_id": committee_id})
+                            if head:
+                                new_key = f"{head['_id']} ({head['name']})"
+                                committee_data[new_key] = faculty_list
 
-            if result.modified_count > 0 or result.upserted_id:
+            # For edits, always use replace instead of update to ensure changes are applied
+            if force_update:
+                # Delete the old document first to ensure changes are detected
+                collection.delete_one({"_id": "verification_team"})
+                result = collection.insert_one({"_id": "verification_team", **committee_data})
+                modified = True
+            else:
+                result = collection.update_one(
+                    {"_id": "verification_team"},
+                    {"$set": committee_data},
+                    upsert=True
+                )
+                modified = result.modified_count > 0 or result.upserted_id is not None
+
+            if modified:
                 return jsonify({
                     "message": "Verification committee created successfully",
                     "department": department,
@@ -87,6 +145,8 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
                 return jsonify({"error": "No changes made"}), 400
 
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             return jsonify({"error": str(e)}), 500
 
     @verification_bp.route('/<department>/verification-committee/addfaculties', methods=['POST'])
