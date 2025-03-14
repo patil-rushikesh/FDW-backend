@@ -15,6 +15,16 @@ app.config["MONGO_URI_FDW"] = os.getenv("MONGO_URI_FDW")
 mongo = PyMongo(app, uri=app.config["MONGO_URI"])
 mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
 
+department_collections = {
+    "AIML": mongo_fdw.db.AIML,
+    "ASH": mongo_fdw.db.ASH,
+    "Civil": mongo_fdw.db.Civil,
+    "Computer": mongo_fdw.db.Computer,
+    "Computer(Regional)": mongo_fdw.db.Computer_Regional,
+    "ENTC": mongo_fdw.db.ENTC,
+    "IT": mongo_fdw.db.IT,
+    "Mechanical": mongo_fdw.db.Mechanical
+}
 
 def calculate_grand_total(data):
     """Calculate grand total and verified marks from all sections"""
@@ -314,7 +324,7 @@ def get_all_faculties():
                 faculty_data = collection.find_one({"_id": user_id})
                 
                 # Get user profile data from users collection
-                user_profile = db_users.find_one({"_id": user_id})
+                user_profile = mongo.db.users.find_one({"_id": user_id})
 
                 if faculty_data and user_profile:
                     faculty_info = {

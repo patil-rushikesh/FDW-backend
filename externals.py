@@ -354,3 +354,161 @@ def dean_external_assignment(department, external_id, dean_id):
     except Exception as e:
         print(f"Error creating dean-external assignment: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/dean-external-mappings', methods=['GET'])
+def get_dean_external_mappings(department):
+    """Get all dean to external reviewer mappings for a department"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get the mappings document
+        mappings_doc = collection.find_one({"_id": "dean_external_mappings"})
+        if not mappings_doc or 'mappings' not in mappings_doc:
+            return jsonify({
+                "message": "No dean-external mappings found",
+                "data": []
+            }), 200
+
+        # Get reviewer and dean details for each mapping
+        detailed_mappings = []
+        for mapping in mappings_doc['mappings']:
+            external_id = mapping['external_id']
+            dean_id = mapping['dean_id']
+            
+            # Get dean details
+            dean = db_users.find_one({"_id": dean_id})
+            # Get external details
+            external = db_users.find_one({"_id": external_id})
+            
+            detailed_mappings.append({
+                "dean": {
+                    "id": dean_id,
+                    "name": dean.get("name", "Unknown") if dean else "Unknown",
+                    "mail": dean.get("mail", "")
+                },
+                "external": {
+                    "id": external_id,
+                    "name": external.get("full_name", "Unknown") if external else "Unknown",
+                    "mail": external.get("mail", "")
+                }
+            })
+
+        return jsonify({
+            "message": "Dean-External mappings retrieved successfully",
+            "data": detailed_mappings
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving dean-external mappings: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/dean-assignments/<dean_id>', methods=['GET'])
+def get_dean_assignments(department, dean_id):
+    """Get faculty assignments for a specific dean"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get dean assignments document
+        assignments = collection.find_one({"_id": "dean_assignments"})
+        if not assignments or dean_id not in assignments:
+            return jsonify({
+                "message": "No assignments found for this dean",
+                "data": {}
+            }), 200
+
+        # Get dean details from users collection
+        dean = db_users.find_one({"_id": dean_id})
+        if not dean:
+            return jsonify({"error": "Dean not found"}), 404
+
+        return jsonify({
+            "message": "Dean assignments retrieved successfully",
+            "data": assignments[dean_id]
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving dean assignments: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/assign-interaction-deans', methods=['POST'])
+def assign_interaction_deans(department):
+    """Assign deans to a department for interaction"""
+    try:
+        data = request.get_json()
+        if not data or 'dean_ids' not in data:
+            return jsonify({
+                "error": "Missing required field: dean_ids list"
+            }), 400
+
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        dean_assignments = []
+        for dean_id in data['dean_ids']:
+            # Verify dean exists and is actually a dean
+            dean = db_users.find_one({"_id": dean_id, "role": "Dean"})
+            if not dean:
+                continue  # Skip invalid deans
+
+            # Add department to dean's interaction list
+            db_users.update_one(
+                {"_id": dean_id},
+                {
+                    "$set": {"isAddedForInteraction": True},
+                    "$addToSet": {"interactionDepartments": department}
+                }
+            )
+
+            dean_assignments.append({
+                "_id": dean_id,
+                "name": dean.get("name", "Unknown"),
+                "mail": dean.get("mail", ""),
+                "dept": dean.get("dept", "Unknown")
+            })
+
+        # Update department's interaction deans list
+        collection.update_one(
+            {"_id": "interaction_deans"},
+            {"$set": {"deans": dean_assignments}},
+            upsert=True
+        )
+
+        return jsonify({
+            "message": f"Deans assigned successfully to {department} department",
+            "assigned_deans": dean_assignments
+        }), 200
+
+    except Exception as e:
+        print(f"Error assigning deans for interaction: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/interaction-deans', methods=['GET'])
+def get_department_interaction_deans(department):
+    """Get all deans assigned for interaction in a department"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        interaction_doc = collection.find_one({"_id": "interaction_deans"})
+        if not interaction_doc:
+            return jsonify({
+                "message": "No deans assigned for interaction",
+                "department": department,
+                "deans": []
+            }), 200
+
+        return jsonify({
+            "message": "Interaction deans retrieved successfully",
+            "department": department,
+            "deans": interaction_doc.get("deans", [])
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving interaction deans: {str(e)}")
+        return jsonify({"error": str(e)}), 500
