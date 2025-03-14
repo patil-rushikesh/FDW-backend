@@ -498,7 +498,7 @@ def login():
             response_data.update({
                 "specialization": user_data.get("specialization"),
                 "organization": user_data.get("organization"),
-                "facultyToReview": user_data.get("facultyToReview", [])
+                "facultyToReview": user_data.get("facultyToReview", []),
                 "mob": user_data.get("mob"),
             })
         else:
