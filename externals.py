@@ -78,17 +78,17 @@ def create_external(department):
             return jsonify({"error": "No data provided"}), 400
 
         # Validate required fields
-        required_fields = ["full_name", "email", "mobile_no", "designation", "specialization", "organization"]
+        required_fields = ["full_name", "mail", "mob", "desg", "specialization", "organization"]
         for field in required_fields:
             if not data.get(field):
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
         # Validate email format
-        if not validate_email(data['email']):
+        if not validate_email(data['mail']):
             return jsonify({"error": "Invalid email format"}), 400
 
         # Validate mobile number
-        if not validate_mobile(data['mobile_no']):
+        if not validate_mobile(data['mob']):
             return jsonify({"error": "Invalid mobile number format. Must be 10 digits"}), 400
 
         # Get department collection
@@ -141,14 +141,12 @@ def create_external(department):
         #     external_id  # Password is same as ID
         # )
 
-        if result.modified_count > 0 or result.upserted_id:
-            return jsonify({
-                "message": "External reviewer added successfully",
-                "data": external_doc,
-                # "credentials_sent": email_sent
-            }), 201
-        else:
-            return jsonify({"error": "Failed to add external reviewer"}), 400
+        return jsonify({
+            "message": "External reviewer added successfully",
+            "data": external_doc,
+            # "credentials_sent": email_sent
+        }), 201
+        
 
     except Exception as e:
         print(f"Error creating external reviewer: {str(e)}")
