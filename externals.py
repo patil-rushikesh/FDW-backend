@@ -103,8 +103,8 @@ def create_external(department):
         external_doc = {
             "_id": external_id,
             "full_name": data['full_name'],
-            "email": data['email'],
-            "mobile_no": data['mobile_no'],
+            "mail": data['mail'],
+            "mob": data['mob'],
             "desg": data['desg'],
             "specialization": data['specialization'],
             "organization": data['organization'],

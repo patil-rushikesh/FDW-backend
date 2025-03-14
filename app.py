@@ -489,7 +489,7 @@ def login():
             "role": user_data.get("role"),
             "dept": user_data.get("dept"),
             "isExternal": user_data.get("isExternal", False),
-            "mail": user_data.get("email"),
+            "mail": user_data.get("mail"),
             "desg": user_data.get("desg", "Faculty")
         }
 
