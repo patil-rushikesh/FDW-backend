@@ -1854,12 +1854,49 @@ def submit_form(department, user_id):
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "verification_pending"}}
+            {"$set": {"status": "Portfolio_Mark_pending"}}
         )
 
         if result.modified_count > 0:
             return jsonify({
                 "message": "Form submitted successfully",
+                "new_status": "Portfolio_Mark_pending"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
+@app.route('/<department>/<user_id>/portfolio-given', methods=['POST'])
+def portfolio_given(department, user_id):
+    """Changes status from 'Portfolio_Mark_pending' to 'verification_pending' when portfolio marks are assigned"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status', 'pending')
+        if current_status != 'Portfolio_Mark_pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in Portfolio_Mark_pending status to proceed"
+            }), 400
+
+        # Update status
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"status": "verification_pending"}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "Portfolio marks assigned successfully",
                 "new_status": "verification_pending"
             }), 200
         return jsonify({"error": "No changes made"}), 400
@@ -1931,7 +1968,7 @@ def verify_research(department,verifier_id, user_id):
 
 @app.route('/<department>/<user_id>/verify-authority', methods=['POST'])
 def verify_authority(department, user_id):
-    """Changes status from 'authority_verification_pending' to 'verified'"""
+    """Changes status from 'authority_verification_pending' to 'Interaction_pending'"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -1943,21 +1980,21 @@ def verify_authority(department, user_id):
             return jsonify({"error": "User not found"}), 404
 
         current_status = user_doc.get('status')
-        if current_status != 'authority_verification_pending':
+        if current_status != 'verified':
             return jsonify({
                 "error": "Invalid status transition",
-                "message": "Form must be in authority_verification_pending status"
+                "message": "Form must be in verified status"
             }), 400
 
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "verified"}}
+            {"$set": {"status": "Interaction_pending"}}
         )
         if result.modified_count > 0:
             return jsonify({
                 "message": "Authority verification completed",
-                "new_status": "verified"
+                "new_status": "Interaction_pending"
             }), 200
         return jsonify({"error": "No changes made"}), 400
 
