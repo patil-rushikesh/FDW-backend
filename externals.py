@@ -105,7 +105,7 @@ def create_external(department):
             "full_name": data['full_name'],
             "email": data['email'],
             "mobile_no": data['mobile_no'],
-            "designation": data['designation'],
+            "desg": data['desg'],
             "specialization": data['specialization'],
             "organization": data['organization'],
             "address": data.get('address', ''),  # Optional field
@@ -121,7 +121,7 @@ def create_external(department):
         # Add to db_users collection
         user_doc = {
             **external_doc,  # Include all fields from external_doc
-            "role": "External Reviewer",  # Add role
+            "role": "external",  # Add role
             "isExternal": True,  # Add isExternal flag
             "facultyToReview": []  # Initialize empty list for faculty assignments
         }
@@ -289,3 +289,4 @@ def get_external_specific_assignments(department, id):
     except Exception as e:
         print(f"Error retrieving external reviewer assignments: {str(e)}")
         return jsonify({"error": str(e)}), 500
+    

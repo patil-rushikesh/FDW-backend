@@ -489,7 +489,7 @@ def login():
             "role": user_data.get("role"),
             "dept": user_data.get("dept"),
             "isExternal": user_data.get("isExternal", False),
-            "email": user_data.get("email"),
+            "mail": user_data.get("email"),
             "desg": user_data.get("desg", "Faculty")
         }
 
@@ -499,6 +499,7 @@ def login():
                 "specialization": user_data.get("specialization"),
                 "organization": user_data.get("organization"),
                 "facultyToReview": user_data.get("facultyToReview", [])
+                "mob": user_data.get("mob"),
             })
         else:
             # Add regular faculty fields
