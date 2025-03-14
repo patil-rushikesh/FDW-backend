@@ -1157,11 +1157,11 @@ def fill_template_document(data, user_id, department):
             Assis_A_total_marks = (data.get('A', {}).get('total_marks', 0))
             
         if role == 'Associate Professor':
-            section_a_marks = section_a_marks * 0.818
+            section_a_marks = section_a_marks / 0.818
             Assoc_A =  section_a_marks
             Assoc_A_total_marks = (data.get('A', {}).get('total_marks', 0))
         elif role == 'Professor':
-            section_a_marks = section_a_marks * 0.68        
+            section_a_marks = section_a_marks / 0.68        
             Prof_A =  section_a_marks
             Prof_A_total_marks = (data.get('A', {}).get('total_marks', 0))
 
@@ -1257,13 +1257,13 @@ def fill_template_document(data, user_id, department):
             '{projects_guided_marks}': str(round(data['A']['6']['total_marks'], 2)),
             '{student_feedback_marks}': str(round(data['A']['7']['total_marks'], 2)),
             '{ptg_meetings_marks}': str(round(data['A']['8']['total_marks'], 2)),
-            '{section_a_total}': str(round(section_a_marks, 2)),
-            '{Prof_A}': str(round(Prof_A, 2)),
-            '{Assoc_A}': str(round(Assoc_A, 2)),
-            '{Assis_A}': str(round(Assis_A, 2)),
-            '{Prof_A_total_marks}': str(round(Prof_A_total_marks, 2)),
-            '{Assoc_A_total_marks}': str(round(Assoc_A_total_marks, 2)),
-            '{Assis_A_total_marks}': str(round(Assis_A_total_marks, 2)),
+            '{section_a_total}': str(round(section_a_marks)),
+            '{Prof_A}': str(round(Prof_A)),
+            '{Assoc_A}': str(round(Assoc_A)),
+            '{Assis_A}': str(round(Assis_A)),
+            '{Prof_A_total_marks}': str(round(Prof_A_total_marks)),
+            '{Assoc_A_total_marks}': str(round(Assoc_A_total_marks)),
+            '{Assis_A_total_marks}': str(round(Assis_A_total_marks)),
             
             # Section B detailed placeholders - Updated to include verification marks
             # 1. Journal Papers
@@ -1504,7 +1504,12 @@ def fill_template_document(data, user_id, department):
             '{total_for_B}' : str(round(data['B']['total_marks'])),
             '{total_for_A}' : str(round(data['A']['total_marks'])),
             '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'])),
-            '{grand_total}': str(round(data['grand_total']['grand_total']))
+            '{grand_total}': str(round(data['grand_total']['grand_total'])),
+            '{total_for_A_verified}' : str(round(data['A_verified_marks'])),
+            '{total_for_C_verified}' : str(round(data['C_verified_marks'])),
+            '{total_for_D_verified}' : str(round(data['D_verified_marks'])),
+            '{total_for_E_verified}' : str(round(data['E_verified_marks'])),
+            '{grand_verified_marks}': str(round(data['grand_verified_marks'])),
         })
         
         print('-----------after placeholders update-----------')
@@ -1627,13 +1632,42 @@ def generate_document(department, user_id):
         if isinstance(grand_total_data, (int, float)):
             grand_total_data = {'grand_total': float(grand_total_data), 'status': 'pending'}
         
+        A_verified_marks = 0
+        B_verified_marks = 0
+        C_verified_marks = 0
+        D_verified_marks = 0
+        E_verified_marks = 0
+        grand_verified_marks = 0
+        
+        if user_doc.get('grand_marks_A', {}).get('verified_marks'):
+            A_verified_marks = user_doc['grand_marks_A']['verified_marks']
+        if user_doc.get('grand_marks_B', {}).get('verified_marks'):
+            B_verified_marks = user_doc['grand_marks_B']['verified_marks']
+        if user_doc.get('grand_marks_C', {}).get('verified_marks'):
+            C_verified_marks = user_doc['grand_marks_C']['verified_marks']
+        if user_doc.get('grand_marks_D', {}).get('verified_marks'):
+            D_verified_marks = user_doc['grand_marks_D']['verified_marks']
+        if user_doc.get('grand_marks_E', {}).get('verified_marks'):
+            E_verified_marks = user_doc['grand_marks_E']['verified_marks']
+        if user_doc.get('grand_verified_marks'):
+            grand_verified_marks = user_doc['grand_verified_marks']
+        
+        
+        
         data = {
             'A': user_doc.get('A', {}),
             'B': user_doc.get('B', {}),
             'C': user_doc.get('C', {}),
             'D': user_doc.get('D', {}),
             'E': user_doc.get('E', {}),
-            'grand_total': grand_total_data
+            'grand_total': grand_total_data,
+            'A_verified_marks' : A_verified_marks,
+            'B_verified_marks' : B_verified_marks,
+            'C_verified_marks' : C_verified_marks,
+            'D_verified_marks' : D_verified_marks,
+            'E_verified_marks' : E_verified_marks,
+            'grand_verified_marks' : grand_verified_marks
+            
         }
 
         doc = fill_template_document(data, user_id, department)
