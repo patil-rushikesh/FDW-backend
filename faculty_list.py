@@ -294,3 +294,48 @@ def update_verified_marks(department, faculty_id):
             "status": "error",
             "message": str(e)
         }), 500
+
+@faculty_list.route('/all-faculties', methods=['GET'])
+def get_all_faculties():
+    """Get faculty information from all departments"""
+    try:
+        all_faculties = []
+        
+        # Iterate through all departments
+        for dept, collection in department_collections.items():
+            # Get the lookup document for the department
+            lookup_doc = collection.find_one({"_id": "lookup"})
+            if not lookup_doc or "data" not in lookup_doc:
+                continue
+
+            # Iterate through faculty in lookup data
+            for user_id, role in lookup_doc["data"].items():
+                # Get faculty data from department collection
+                faculty_data = collection.find_one({"_id": user_id})
+                
+                # Get user profile data from users collection
+                user_profile = db_users.find_one({"_id": user_id})
+
+                if faculty_data and user_profile:
+                    faculty_info = {
+                        "_id": user_id,
+                        "name": user_profile.get("name", ""),
+                        "department": dept,
+                        "designation": user_profile.get("desg", "Faculty"),
+                        "role": role,
+                        "status": faculty_data.get("status", "pending")
+                    }
+                    all_faculties.append(faculty_info)
+
+        return jsonify({
+            "status": "success",
+            "faculty_count": len(all_faculties),
+            "data": all_faculties
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving all faculties: {str(e)}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
