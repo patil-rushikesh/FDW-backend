@@ -27,7 +27,6 @@ department_collections = {
     "Mechanical": mongo_fdw.db.Mechanical
 }
 
-
 def calculate_grand_total(data):
     """Calculate grand total and verified marks from all sections"""
     try:

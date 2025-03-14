@@ -490,7 +490,9 @@ def login():
             "dept": user_data.get("dept"),
             "isExternal": user_data.get("isExternal", False),
             "mail": user_data.get("mail"),
-            "desg": user_data.get("desg", "Faculty")
+            "desg": user_data.get("desg", "Faculty"),
+            "isAddedForInteraction" : user_data.get("isAddedForInteraction", False),
+            "interactionDepartments" : user_data.get("interactionDepartments", []),
         }
 
         # Add external-specific fields if user is external
