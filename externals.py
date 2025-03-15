@@ -360,29 +360,50 @@ def dean_external_assignment(department, external_id, dean_id):
         if not dean:
             return jsonify({"error": "Dean not found"}), 404
 
-        # Create dean assignments using external reviewer's faculty list
-        external_assignments = assignments[external_id]
-        dean_assignments = {
-            dean_id: {
-                "reviewer_info": {
-                    "_id": dean_id,
-                    "full_name": dean.get("name", "Unknown"),
-                    "mail": dean.get("mail", ""),
-                    "isExternal": False,
-                    "isDean": True
-                },
-                external_id: external_assignments["assigned_faculty"]  # Associate faculty list with external ID
-            }
+        # Get existing dean assignments
+        existing_assignments = collection.find_one({"_id": "dean_assignments"})
+        
+        # Create or update dean info
+        dean_info = {
+            "_id": dean_id,
+            "full_name": dean.get("name", "Unknown"),
+            "mail": dean.get("mail", ""),
+            "isExternal": False,
+            "isDean": True
         }
 
-        # Update or create dean assignments document
-        result = collection.update_one(
-            {"_id": "dean_assignments"},
-            {"$set": {dean_id: dean_assignments[dean_id]}},
-            upsert=True
-        )
+        # Get external assignments
+        external_assignments = assignments[external_id]["assigned_faculty"]
 
-        # Create mapping between dean and external reviewer
+        if existing_assignments and dean_id in existing_assignments:
+            # Update existing dean's assignments
+            collection.update_one(
+                {"_id": "dean_assignments"},
+                {
+                    "$set": {
+                        f"{dean_id}.reviewer_info": dean_info
+                    },
+                    "$set": {
+                        f"{dean_id}.{external_id}": external_assignments
+                    }
+                }
+            )
+        else:
+            # Create new dean assignments
+            collection.update_one(
+                {"_id": "dean_assignments"},
+                {
+                    "$set": {
+                        f"{dean_id}": {
+                            "reviewer_info": dean_info,
+                            external_id: external_assignments
+                        }
+                    }
+                },
+                upsert=True
+            )
+
+        # Create or update mapping
         mapping_doc = {
             external_id: dean_id,
             "timestamp": datetime.datetime.now()
@@ -394,9 +415,15 @@ def dean_external_assignment(department, external_id, dean_id):
             upsert=True
         )
 
+        # Get updated assignments for response
+        updated_assignments = collection.find_one(
+            {"_id": "dean_assignments"},
+            {dean_id: 1}
+        )
+
         return jsonify({
             "message": "Dean-External mapping created successfully",
-            "dean_assignments": dean_assignments[dean_id],
+            "dean_assignments": updated_assignments[dean_id],
             "mapping": mapping_doc
         }), 200
 
