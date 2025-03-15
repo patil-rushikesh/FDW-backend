@@ -840,9 +840,9 @@ def get_all_interaction_marks(department, faculty_id):
         print(f"Error retrieving interaction marks: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
-@externals.route('/<department>/all_faculties_marks', methods=['GET'])
+@externals.route('/<department>/all_faculties_final_marks', methods=['GET'])
 def get_all_faculties_marks(department):
-    """Get interaction marks for all faculties in a department"""
+    """Get interaction marks and final calculated marks for all faculties"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -857,59 +857,84 @@ def get_all_faculties_marks(department):
                 "data": []
             }), 200
 
-        # Get all faculty marks
         faculty_marks_list = []
         
         for faculty_id, marks in marks_doc.items():
             if faculty_id == "_id":
                 continue
+            print(faculty_id)
 
-            # Get faculty details
-            faculty = db_users.find_one({"_id": faculty_id})
+            # Get faculty details and verified marks
+            faculty = collection.find_one({"_id": faculty_id})
             if not faculty:
                 continue
 
-            faculty_data = {
+            # Basic faculty info
+            faculty_data = {}
+            
+            # Calculate final marks if status is "done"
+            if faculty.get("status") == "done" and faculty.get("grand_verified_marks"):
+                user = db_users.find_one({"_id": faculty_id})
+                faculty_data = {
                 "faculty_info": {
                     "id": faculty_id,
-                    "name": faculty.get("name", "Unknown"),
+                    "name": user.get("name", "Unknown"),
                     "designation": faculty.get("desg", "Faculty"),
-                    "department": department
+                    "department": department,
+                    "status": faculty.get("status", "pending")
                 },
-                "marks": {
+                "interaction_marks": {
                     "external": marks.get("external_marks", {
                         "external_id": None,
-                        "marks": None
+                        "marks": None,
+                        "comments": None
                     }),
                     "dean": marks.get("dean_marks", {
                         "dean_id": None,
-                        "marks": None
+                        "marks": None,
+                        "comments": None
                     }),
-                    "hod": marks.get("hod_marks", None)
-                },
-                "status": {
-                    "external_reviewed": bool(marks.get("external_marks")),
-                    "dean_reviewed": bool(marks.get("dean_marks")),
-                    "hod_reviewed": bool(marks.get("hod_marks"))
+                    "hod": {
+                        "marks": marks.get("hod_marks"),
+                        "comments": marks.get("hod_comments")
+                    }
                 }
-            }
-            
-            # Calculate average if all marks are present
-            all_marks = []
-            if marks.get("external_marks", {}).get("marks"):
-                all_marks.append(marks["external_marks"]["marks"])
-            if marks.get("dean_marks", {}).get("marks"):
-                all_marks.append(marks["dean_marks"]["marks"])
-            if marks.get("hod_marks"):
-                all_marks.append(marks["hod_marks"])
-            
-            faculty_data["marks"]["average"] = sum(all_marks) / len(all_marks) if all_marks else None
-            faculty_data["marks"]["total_reviews"] = len(all_marks)
-            
-            faculty_marks_list.append(faculty_data)
+                }
 
-        # Sort by faculty name
-        faculty_marks_list.sort(key=lambda x: x["faculty_info"]["name"])
+                # Calculate interaction average
+                interaction_marks = []
+                if marks.get("external_marks", {}).get("marks"):
+                    interaction_marks.append(marks["external_marks"]["marks"])
+                if marks.get("dean_marks", {}).get("marks"):
+                    interaction_marks.append(marks["dean_marks"]["marks"])
+                if marks.get("hod_marks"):
+                    interaction_marks.append(marks["hod_marks"])
+                
+                interaction_avg = sum(interaction_marks) / len(interaction_marks) if interaction_marks else 0
+                faculty_data["interaction_marks"]["average"] = round(interaction_avg, 2)
+                faculty_data["interaction_marks"]["total_reviews"] = len(interaction_marks)
+
+                verified_marks = faculty.get("grand_verified_marks", 0)
+                scaled_verified = (verified_marks / 1000) * 75  # Scale verified marks to 75
+                scaled_interaction = (interaction_avg / 100) * 25  # Scale interaction to 25
+                
+                faculty_data["final_marks"] = {
+                    "verified_marks": verified_marks,
+                    "scaled_verified_marks": round(scaled_verified, 2),
+                    "interaction_average": interaction_avg,
+                    "scaled_interaction_marks": round(scaled_interaction, 2),
+                    "total_marks": round(scaled_verified + scaled_interaction, 2)
+                }
+           
+                faculty_marks_list.append(faculty_data)
+
+     
+
+        # Calculate summary statistics
+        completed_reviews = sum(1 for f in faculty_marks_list if f["interaction_marks"]["total_reviews"] == 3)
+        partial_reviews = sum(1 for f in faculty_marks_list if 0 < f["interaction_marks"]["total_reviews"] < 3)
+        no_reviews = sum(1 for f in faculty_marks_list if f["interaction_marks"]["total_reviews"] == 0)
+        final_marks_count = sum(1 for f in faculty_marks_list if "final_marks" in f)
 
         return jsonify({
             "message": "All faculty marks retrieved successfully",
@@ -917,9 +942,10 @@ def get_all_faculties_marks(department):
             "total_faculty": len(faculty_marks_list),
             "data": faculty_marks_list,
             "summary": {
-                "total_reviewed": sum(1 for f in faculty_marks_list if f["marks"]["total_reviews"] == 3),
-                "partially_reviewed": sum(1 for f in faculty_marks_list if 0 < f["marks"]["total_reviews"] < 3),
-                "not_reviewed": sum(1 for f in faculty_marks_list if f["marks"]["total_reviews"] == 0)
+                "total_reviewed": completed_reviews,
+                "partially_reviewed": partial_reviews,
+                "not_reviewed": no_reviews,
+                "final_marks_calculated": final_marks_count
             }
         }), 200
 
