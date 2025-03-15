@@ -451,7 +451,7 @@ def assign_interaction_deans(department):
         dean_assignments = []
         for dean_id in data['dean_ids']:
             # Verify dean exists and is actually a dean
-            dean = db_users.find_one({"_id": dean_id, "role": "Dean"})
+            dean = db_users.find_one({"_id": dean_id, "desg": "Dean"})
             if not dean:
                 continue  # Skip invalid deans
 
