@@ -37,6 +37,51 @@ department_collections = {
     "Mechanical": mongo_fdw.db.Mechanical
 }
 
+def check_and_update_review_completion(collection, faculty_id):
+    """Check if all three reviews are present and update status"""
+    try:
+        # Get marks document
+        marks_doc = collection.find_one(
+            {"_id": "interaction_marks"},
+            {faculty_id: 1}
+        )
+
+        if not marks_doc or faculty_id not in marks_doc:
+            return False
+
+        faculty_marks = marks_doc[faculty_id]
+        
+        # Check if all three reviews exist
+        has_external = bool(faculty_marks.get("external_marks", {}).get("marks"))
+        has_dean = bool(faculty_marks.get("dean_marks", {}).get("marks"))
+        has_hod = bool(faculty_marks.get("hod_marks"))
+
+        if has_external and has_dean and has_hod:
+            # Update faculty document status
+            collection.update_one(
+                {"_id": faculty_id},
+                {"$set": {"interaction_review_status": "completed"}}
+            )
+
+            # Update interaction_marks document status
+            collection.update_one(
+                {"_id": "interaction_marks"},
+                {"$set": {f"{faculty_id}.review_status": "completed"}}
+            )
+
+            # Update externals_assignments status
+            collection.update_many(
+                {"_id": "externals_assignments"},
+                {"$set": {"assigned_faculty.$[elem].review_status": "completed"}},
+                array_filters=[{"elem._id": faculty_id}]
+            )
+
+            return True
+        return False
+
+    except Exception as e:
+        print(f"Error checking review completion: {str(e)}")
+        return False
 
 
 def validate_email(email):
@@ -575,6 +620,14 @@ def externalFacultyMarks(department,external_id,faculty_id) :
             },
             array_filters=[{"elem._id": faculty_id}]
         )
+        isCompleted = check_and_update_review_completion(collection, faculty_id)
+        if isCompleted : 
+            collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "status": "done"
+            }}
+        )
         return jsonify({"message": "Marks and comments updated successfully"}), 200
     except Exception as e:
         print(f"Error updating marks and comments: {str(e)}")
@@ -627,6 +680,14 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
                 }
             },
             array_filters=[{"elem._id": faculty_id}]
+        )
+        isCompleted = check_and_update_review_completion(collection, faculty_id)
+        if isCompleted : 
+            collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "status": "done"
+            }}
         )
         return jsonify({"message": "Marks and comments updated successfully"}), 200
     except Exception as e:
@@ -691,6 +752,14 @@ def facultyHodMarks(department,external_id, faculty_id):
                 f"{faculty_id}.comments": comments
             }},
             upsert=True
+        )
+        isCompleted = check_and_update_review_completion(collection, faculty_id)
+        if isCompleted : 
+            collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "status": "done"
+            }}
         )
         
         return jsonify({"message": "Marks and comments updated successfully"}), 200
