@@ -538,9 +538,14 @@ def externalFacultyMarks(department,external_id,faculty_id) :
         if 'total_marks' not in data:
             return jsonify({"error": "Missing required field: marks"}), 400
         total_marks = data['total_marks']
+        comments = data.get('comments', '')  # Get comments from request data, default empty string
+        
         collection.update_one(
             {"_id": faculty_id},
-            {"$set": {"total_marks_by_external_for_interaction": total_marks}}
+            {"$set": {
+                "total_marks_by_external_for_interaction": total_marks,
+                "comments_by_external_for_interaction": comments
+            }}
         )
         
         collection.update_one(
@@ -550,6 +555,7 @@ def externalFacultyMarks(department,external_id,faculty_id) :
                     f"{faculty_id}.external_marks": {
                         "external_id": external_id,
                         "marks": total_marks,
+                        "comments": comments
                     }
                 }
             },
@@ -562,14 +568,15 @@ def externalFacultyMarks(department,external_id,faculty_id) :
             {
                 "$set": {
                     f"{external_id}.assigned_faculty.$[elem].isReviewed": True,
-                    f"{external_id}.assigned_faculty.$[elem].total_marks": total_marks
+                    f"{external_id}.assigned_faculty.$[elem].total_marks": total_marks,
+                    f"{external_id}.assigned_faculty.$[elem].comments": comments
                 }
             },
             array_filters=[{"elem._id": faculty_id}]
         )
-        return jsonify({"message": "Marks updated successfully"}), 200
+        return jsonify({"message": "Marks and comments updated successfully"}), 200
     except Exception as e:
-        print(f"Error updating marks: {str(e)}")
+        print(f"Error updating marks and comments: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
 @externals.route('/<department>/dean_interaction_marks/<dean_id>/<faculty_id>', methods=['POST'])
@@ -587,9 +594,14 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
         if 'total_marks' not in data:
             return jsonify({"error": "Missing required field: marks"}), 400
         total_marks = data['total_marks']
+        comments = data.get('comments', '')  # Get comments from request data, default empty string
+        
         collection.update_one(
             {"_id": faculty_id},
-            {"$set": {"total_marks_by_dean_for_interaction": total_marks}}
+            {"$set": {
+                "total_marks_by_dean_for_interaction": total_marks,
+                "comments_by_dean_for_interaction": comments
+            }}
         )
         collection.update_one(
             {"_id": "interaction_marks"},
@@ -598,6 +610,7 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
                     f"{faculty_id}.dean_marks": {
                         "dean_id": dean_id,
                         "marks": total_marks,
+                        "comments": comments
                     }
                 }
             },
@@ -608,14 +621,15 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
             {
                 "$set": {
                     f"{dean_id}.assigned_faculty.$[elem].isReviewed": True,
-                    f"{dean_id}.assigned_faculty.$[elem].total_marks": total_marks
+                    f"{dean_id}.assigned_faculty.$[elem].total_marks": total_marks,
+                    f"{dean_id}.assigned_faculty.$[elem].comments": comments
                 }
             },
             array_filters=[{"elem._id": faculty_id}]
         )
-        return jsonify({"message": "Marks updated successfully"}), 200
+        return jsonify({"message": "Marks and comments updated successfully"}), 200
     except Exception as e:
-        print(f"Error updating marks: {str(e)}")
+        print(f"Error updating marks and comments: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
 @externals.route('/<department>/hod_interaction_marks/<faculty_id>', methods=['POST'])
