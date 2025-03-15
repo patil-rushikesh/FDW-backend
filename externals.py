@@ -43,7 +43,6 @@ def check_and_update_review_completion(collection, faculty_id):
         # Get marks document
         marks_doc = collection.find_one(
             {"_id": "interaction_marks"},
-            {faculty_id: 1}
         )
 
         if not marks_doc or faculty_id not in marks_doc:
@@ -60,7 +59,12 @@ def check_and_update_review_completion(collection, faculty_id):
             # Update faculty document status
             collection.update_one(
                 {"_id": faculty_id},
-                {"$set": {"interaction_review_status": "completed"}}
+                {
+                    "$set": {
+                        "interaction_review_status": "completed",
+                        "status": "done"  # Update the main status field
+                    }
+                }
             )
 
             # Update interaction_marks document status
@@ -338,9 +342,7 @@ def get_external_specific_assignments(department, id):
 
 @externals.route('/<department>/dean-external-assignment/<external_id>/<dean_id>', methods=['POST'])
 def dean_external_assignment(department, external_id, dean_id):
-    """Creating the map creating relation between dean and external reviewer
-    also assigning the same verifying faculty to dean as external reviewer
-    """
+    """Creating the map between dean and external reviewer with assignments"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -369,7 +371,7 @@ def dean_external_assignment(department, external_id, dean_id):
                     "isExternal": False,
                     "isDean": True
                 },
-                "assigned_faculty": external_assignments["assigned_faculty"]
+                external_id: external_assignments["assigned_faculty"]  # Associate faculty list with external ID
             }
         }
 
@@ -381,21 +383,21 @@ def dean_external_assignment(department, external_id, dean_id):
         )
 
         # Create mapping between dean and external reviewer
-        dean_external_mapping = {
-            
-            external_id : dean_id,
+        mapping_doc = {
+            external_id: dean_id,
+            "timestamp": datetime.datetime.now()
         }
 
         collection.update_one(
             {"_id": "dean_external_mappings"},
-            {"$push": {"mappings": dean_external_mapping}},
+            {"$push": {"mappings": mapping_doc}},
             upsert=True
         )
 
         return jsonify({
             "message": "Dean-External mapping created successfully",
-            "dean_assignments": dean_assignments,
-            "mapping": dean_external_mapping
+            "dean_assignments": dean_assignments[dean_id],
+            "mapping": mapping_doc
         }), 200
 
     except Exception as e:
