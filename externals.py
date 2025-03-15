@@ -213,7 +213,8 @@ def assign_externals(department):
                         faculty_list.append({
                             "_id": faculty_id,
                             "name": faculty.get("name", "Unknown"),
-                            "isReviewed": False
+                            "isReviewed": False,
+                            "total_marks": 0
                         })
                 assignments[external_id] = {
                     "reviewer_info": reviewer,
@@ -371,32 +372,48 @@ def get_dean_external_mappings(department):
                 "data": []
             }), 200
 
-        # Get reviewer and dean details for each mapping
+        # Get dean assignments for verification
+        dean_assignments = collection.find_one({"_id": "dean_assignments"})
+        
+        # Get detailed mappings with verification status
         detailed_mappings = []
         for mapping in mappings_doc['mappings']:
-            external_id = mapping['external_id']
-            dean_id = mapping['dean_id']
+            external_id = list(mapping.keys())[0]  # Get external ID
+            dean_id = mapping[external_id]         # Get dean ID
             
             # Get dean details
             dean = db_users.find_one({"_id": dean_id})
             # Get external details
             external = db_users.find_one({"_id": external_id})
             
+            # Check if dean has active assignments
+            has_assignments = bool(dean_assignments and 
+                                dean_id in dean_assignments and 
+                                dean_assignments[dean_id].get("assigned_faculty"))
+
             detailed_mappings.append({
                 "dean": {
                     "id": dean_id,
                     "name": dean.get("name", "Unknown") if dean else "Unknown",
-                    "mail": dean.get("mail", "")
+                    "mail": dean.get("mail", ""),
+                    "department": dean.get("dept", "Unknown") if dean else "Unknown"
                 },
                 "external": {
                     "id": external_id,
                     "name": external.get("full_name", "Unknown") if external else "Unknown",
-                    "mail": external.get("mail", "")
+                    "mail": external.get("mail", ""),
+                    "organization": external.get("organization", "Unknown")
+                },
+                "status": {
+                    "has_assignments": has_assignments,
+                    "mapped_on": mapping.get("timestamp", "Unknown")
                 }
             })
 
         return jsonify({
             "message": "Dean-External mappings retrieved successfully",
+            "department": department,
+            "total_mappings": len(detailed_mappings),
             "data": detailed_mappings
         }), 200
 
@@ -451,7 +468,7 @@ def assign_interaction_deans(department):
         dean_assignments = []
         for dean_id in data['dean_ids']:
             # Verify dean exists and is actually a dean
-            dean = db_users.find_one({"_id": dean_id, "role": "Dean"})
+            dean = db_users.find_one({"_id": dean_id, "desg": "Dean"})
             if not dean:
                 continue  # Skip invalid deans
 
@@ -512,3 +529,385 @@ def get_department_interaction_deans(department):
     except Exception as e:
         print(f"Error retrieving interaction deans: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+
+@externals.route('<department>/external_interaction_marks/<external_id>/<faculty_id>', methods=['POST'])
+def externalFacultyMarks(department,external_id,faculty_id) : 
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        faculty_collection = collection.find_one({"_id": faculty_id})
+        if not faculty_collection:
+            return jsonify({"error": "Faculty not found"}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        if 'total_marks' not in data:
+            return jsonify({"error": "Missing required field: marks"}), 400
+        total_marks = data['total_marks']
+        collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {"total_marks_by_external_for_interaction": total_marks}}
+        )
+        
+        collection.update_one(
+            {"_id": "interaction_marks"},
+            {
+                "$set": {
+                    f"{faculty_id}.external_marks": {
+                        "external_id": external_id,
+                        "marks": total_marks,
+                    }
+                }
+            },
+            upsert=True
+        )
+
+        # Update external assignments document
+        collection.update_one(
+            {"_id": "externals_assignments"},
+            {
+                "$set": {
+                    f"{external_id}.assigned_faculty.$[elem].isReviewed": True,
+                    f"{external_id}.assigned_faculty.$[elem].total_marks": total_marks
+                }
+            },
+            array_filters=[{"elem._id": faculty_id}]
+        )
+        return jsonify({"message": "Marks updated successfully"}), 200
+    except Exception as e:
+        print(f"Error updating marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@externals.route('<department>/dean_interaction_marks/<dean_id>/<faculty_id>', methods=['POST'])
+def deanFacultyMarks(department,dean_id,faculty_id) :
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        faculty_collection = collection.find_one({"_id": faculty_id})
+        if not faculty_collection:
+            return jsonify({"error": "Faculty not found"}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        if 'total_marks' not in data:
+            return jsonify({"error": "Missing required field: marks"}), 400
+        total_marks = data['total_marks']
+        collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {"total_marks_by_dean_for_interaction": total_marks}}
+        )
+        collection.update_one(
+            {"_id": "interaction_marks"},
+            {
+                "$set": {
+                    f"{faculty_id}.dean_marks": {
+                        "dean_id": dean_id,
+                        "marks": total_marks,
+                    }
+                }
+            },
+            upsert=True
+        )
+        collection.update_one(
+            {"_id": "dean_assignments"},
+            {
+                "$set": {
+                    f"{dean_id}.assigned_faculty.$[elem].isReviewed": True,
+                    f"{dean_id}.assigned_faculty.$[elem].total_marks": total_marks
+                }
+            },
+            array_filters=[{"elem._id": faculty_id}]
+        )
+        return jsonify({"message": "Marks updated successfully"}), 200
+    except Exception as e:
+        print(f"Error updating marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+    
+@externals.route('<department>/hod_interaction_marks/<faculty_id>', methods=['POST'])
+def facultyHodMarks(department,faculty_id) :
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+        faculty_collection = collection.find_one({"_id": faculty_id})
+        if not faculty_collection:
+            return jsonify({"error": "Faculty not found"}), 404
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        if 'total_marks' not in data:
+            return jsonify({"error": "Missing required field: marks"}), 400
+        total_marks = data['total_marks']
+        collection.update_one(
+            {"_id": faculty_id},
+            {"$set": {"total_marks_by_hod_for_interaction": total_marks}}
+        )
+        collection.update_one(
+            {"_id": "interaction_marks"},
+            {
+                "$set": {
+                    f"{faculty_id}.hod_marks": total_marks,
+                }
+            },
+            upsert=True
+        )
+        collection.update_one(
+            {"_id": "interaction-mark-by-hod"},
+            {"$set": {f"{faculty_id}": total_marks}},
+            upsert=True
+        )
+        return jsonify({"message": "Marks updated successfully"}), 200
+    except Exception as e:
+        print(f"Error updating marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/hod_interaction_marks/<faculty_id>', methods=['GET'])
+def get_hod_interaction_marks(department, faculty_id):
+    """Get HOD interaction marks for a specific faculty"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get marks from HOD marks document
+        hod_marks = collection.find_one({"_id": "interaction-mark-by-hod"})
+        if not hod_marks or faculty_id not in hod_marks:
+            return jsonify({
+                "message": "No HOD marks found for this faculty",
+                "data": None
+            }), 200
+
+        return jsonify({
+            "message": "HOD marks retrieved successfully",
+            "faculty_id": faculty_id,
+            "marks": hod_marks[faculty_id]
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving HOD marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/all_interaction_marks/<faculty_id>', methods=['GET'])
+def get_all_interaction_marks(department, faculty_id):
+    """Get all interaction marks (HOD, Dean, External) for a specific faculty"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get consolidated marks document
+        marks_doc = collection.find_one(
+            {"_id": "interaction_marks"},
+            {faculty_id: 1}
+        )
+
+        if not marks_doc or faculty_id not in marks_doc:
+            return jsonify({
+                "message": "No marks found for this faculty",
+                "data": {}
+            }), 200
+
+        faculty_marks = marks_doc[faculty_id]
+
+        # Get faculty details
+        faculty = db_users.find_one({"_id": faculty_id})
+        faculty_name = faculty.get("name", "Unknown") if faculty else "Unknown"
+
+        response_data = {
+            "faculty_info": {
+                "id": faculty_id,
+                "name": faculty_name
+            },
+            "marks": {
+                "external": faculty_marks.get("external_marks", {}),
+                "dean": faculty_marks.get("dean_marks", {}),
+                "hod": faculty_marks.get("hod_marks")
+            }
+        }
+
+        return jsonify({
+            "message": "Interaction marks retrieved successfully",
+            "data": response_data
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving interaction marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/all_faculties_marks', methods=['GET'])
+def get_all_faculties_marks(department):
+    """Get interaction marks for all faculties in a department"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get consolidated marks document
+        marks_doc = collection.find_one({"_id": "interaction_marks"})
+        if not marks_doc:
+            return jsonify({
+                "message": "No marks found for any faculty",
+                "department": department,
+                "data": []
+            }), 200
+
+        # Get all faculty marks
+        faculty_marks_list = []
+        
+        for faculty_id, marks in marks_doc.items():
+            if faculty_id == "_id":
+                continue
+
+            # Get faculty details
+            faculty = db_users.find_one({"_id": faculty_id})
+            if not faculty:
+                continue
+
+            faculty_data = {
+                "faculty_info": {
+                    "id": faculty_id,
+                    "name": faculty.get("name", "Unknown"),
+                    "designation": faculty.get("desg", "Faculty"),
+                    "department": department
+                },
+                "marks": {
+                    "external": marks.get("external_marks", {
+                        "external_id": None,
+                        "marks": None
+                    }),
+                    "dean": marks.get("dean_marks", {
+                        "dean_id": None,
+                        "marks": None
+                    }),
+                    "hod": marks.get("hod_marks", None)
+                },
+                "status": {
+                    "external_reviewed": bool(marks.get("external_marks")),
+                    "dean_reviewed": bool(marks.get("dean_marks")),
+                    "hod_reviewed": bool(marks.get("hod_marks"))
+                }
+            }
+            
+            # Calculate average if all marks are present
+            all_marks = []
+            if marks.get("external_marks", {}).get("marks"):
+                all_marks.append(marks["external_marks"]["marks"])
+            if marks.get("dean_marks", {}).get("marks"):
+                all_marks.append(marks["dean_marks"]["marks"])
+            if marks.get("hod_marks"):
+                all_marks.append(marks["hod_marks"])
+            
+            faculty_data["marks"]["average"] = sum(all_marks) / len(all_marks) if all_marks else None
+            faculty_data["marks"]["total_reviews"] = len(all_marks)
+            
+            faculty_marks_list.append(faculty_data)
+
+        # Sort by faculty name
+        faculty_marks_list.sort(key=lambda x: x["faculty_info"]["name"])
+
+        return jsonify({
+            "message": "All faculty marks retrieved successfully",
+            "department": department,
+            "total_faculty": len(faculty_marks_list),
+            "data": faculty_marks_list,
+            "summary": {
+                "total_reviewed": sum(1 for f in faculty_marks_list if f["marks"]["total_reviews"] == 3),
+                "partially_reviewed": sum(1 for f in faculty_marks_list if 0 < f["marks"]["total_reviews"] < 3),
+                "not_reviewed": sum(1 for f in faculty_marks_list if f["marks"]["total_reviews"] == 0)
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving all faculty marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/all_hod_faculty_marks', methods=['GET'])
+def get_all_hod_faculty_marks(department):
+    """Get HOD interaction marks for all faculties in a department"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get HOD marks document
+        hod_marks_doc = collection.find_one({"_id": "interaction-mark-by-hod"})
+        if not hod_marks_doc:
+            return jsonify({
+                "message": "No HOD marks found for any faculty",
+                "department": department,
+                "data": []
+            }), 200
+
+        # Get all faculty marks with details
+        faculty_marks_list = []
+        
+        for faculty_id, marks in hod_marks_doc.items():
+            if faculty_id == "_id":
+                continue
+
+            # Get faculty details
+            faculty = db_users.find_one({"_id": faculty_id})
+            if not faculty:
+                continue
+
+            faculty_data = {
+                "faculty_info": {
+                    "id": faculty_id,
+                    "name": faculty.get("name", "Unknown"),
+                    "designation": faculty.get("desg", "Faculty"),
+                    "department": department,
+                    "email": faculty.get("mail", ""),
+                },
+                "marks": marks,
+                "status": "Reviewed"
+            }
+            
+            faculty_marks_list.append(faculty_data)
+
+        # Get all department faculty for checking unreviewed faculty
+        all_faculty = db_users.find({"dept": department, "role": "faculty"})
+        reviewed_ids = set(f["faculty_info"]["id"] for f in faculty_marks_list)
+        
+        # Add unreviewed faculty
+        for faculty in all_faculty:
+            if faculty["_id"] not in reviewed_ids:
+                faculty_marks_list.append({
+                    "faculty_info": {
+                        "id": faculty["_id"],
+                        "name": faculty.get("name", "Unknown"),
+                        "designation": faculty.get("desg", "Faculty"),
+                        "department": department,
+                        "email": faculty.get("mail", ""),
+                    },
+                    "marks": None,
+                    "status": "Pending"
+                })
+
+        # Sort by faculty name
+        faculty_marks_list.sort(key=lambda x: x["faculty_info"]["name"])
+
+        # Calculate statistics
+        total_faculty = len(faculty_marks_list)
+        reviewed_count = sum(1 for f in faculty_marks_list if f["status"] == "Reviewed")
+        pending_count = total_faculty - reviewed_count
+
+        return jsonify({
+            "message": "HOD marks for all faculty retrieved successfully",
+            "department": department,
+            "total_faculty": total_faculty,
+            "data": faculty_marks_list,
+            "summary": {
+                "total_reviewed": reviewed_count,
+                "pending_review": pending_count,
+                "review_completion": f"{(reviewed_count/total_faculty*100):.2f}%" if total_faculty > 0 else "0%"
+            }
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving HOD faculty marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
