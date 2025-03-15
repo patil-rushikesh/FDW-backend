@@ -386,10 +386,6 @@ def get_dean_external_mappings(department):
             # Get external details
             external = db_users.find_one({"_id": external_id})
             
-            # Check if dean has active assignments
-            has_assignments = bool(dean_assignments and 
-                                dean_id in dean_assignments and 
-                                dean_assignments[dean_id].get("assigned_faculty"))
 
             detailed_mappings.append({
                 "dean": {
@@ -403,10 +399,6 @@ def get_dean_external_mappings(department):
                     "name": external.get("full_name", "Unknown") if external else "Unknown",
                     "mail": external.get("mail", ""),
                     "organization": external.get("organization", "Unknown")
-                },
-                "status": {
-                    "has_assignments": has_assignments,
-                    "mapped_on": mapping.get("timestamp", "Unknown")
                 }
             })
 
@@ -531,7 +523,7 @@ def get_department_interaction_deans(department):
         return jsonify({"error": str(e)}), 500
 
 
-@externals.route('<department>/external_interaction_marks/<external_id>/<faculty_id>', methods=['POST'])
+@externals.route('/<department>/external_interaction_marks/<external_id>/<faculty_id>', methods=['POST'])
 def externalFacultyMarks(department,external_id,faculty_id) : 
     try:
         collection = department_collections.get(department)
@@ -580,7 +572,7 @@ def externalFacultyMarks(department,external_id,faculty_id) :
         print(f"Error updating marks: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
-@externals.route('<department>/dean_interaction_marks/<dean_id>/<faculty_id>', methods=['POST'])
+@externals.route('/<department>/dean_interaction_marks/<dean_id>/<faculty_id>', methods=['POST'])
 def deanFacultyMarks(department,dean_id,faculty_id) :
     try:
         collection = department_collections.get(department)
@@ -626,7 +618,7 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
         print(f"Error updating marks: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
-@externals.route('<department>/hod_interaction_marks/<faculty_id>', methods=['POST'])
+@externals.route('/<department>/hod_interaction_marks/<faculty_id>', methods=['POST'])
 def facultyHodMarks(department,faculty_id) :
     try:
         collection = department_collections.get(department)
