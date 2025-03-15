@@ -214,6 +214,7 @@ def assign_externals(department):
                             "_id": faculty_id,
                             "name": faculty.get("name", "Unknown"),
                             "isReviewed": False,
+                            "isHodMarksGiven": False,
                             "total_marks": 0
                         })
                 assignments[external_id] = {
@@ -632,8 +633,8 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
         print(f"Error updating marks and comments: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
-@externals.route('/<department>/hod_interaction_marks/<faculty_id>', methods=['POST'])
-def facultyHodMarks(department,faculty_id) :
+@externals.route('/<department>/hod_interaction_marks/<external_id>/<faculty_id>', methods=['POST'])
+def facultyHodMarks(department,external_id, faculty_id):
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -646,28 +647,55 @@ def facultyHodMarks(department,faculty_id) :
             return jsonify({"error": "No data provided"}), 400
         if 'total_marks' not in data:
             return jsonify({"error": "Missing required field: marks"}), 400
+        
         total_marks = data['total_marks']
+        comments = data.get('comments', '')  # Get comments from request data, default empty string
+        
+        # Update faculty document with marks and comments
         collection.update_one(
             {"_id": faculty_id},
-            {"$set": {"total_marks_by_hod_for_interaction": total_marks}}
+            {"$set": {
+                "total_marks_by_hod_for_interaction": total_marks,
+                "comments_by_hod_for_interaction": comments
+            }}
         )
+        collection.update_one(
+            {"_id": "externals_assignments"},
+            {
+                "$set": {
+                    f"{external_id}.assigned_faculty.$[elem].hod_total_marks": total_marks,
+                    f"{external_id}.assigned_faculty.$[elem].isHodMarksGiven": True,
+                    }
+            },
+            array_filters=[{"elem._id": faculty_id}]
+        )
+
+        
+        # Update interaction_marks document with marks and comments
         collection.update_one(
             {"_id": "interaction_marks"},
             {
                 "$set": {
                     f"{faculty_id}.hod_marks": total_marks,
+                    f"{faculty_id}.hod_comments": comments
                 }
             },
             upsert=True
         )
+        
+        # Update HOD-specific marks document with marks and comments
         collection.update_one(
             {"_id": "interaction-mark-by-hod"},
-            {"$set": {f"{faculty_id}": total_marks}},
+            {"$set": {
+                f"{faculty_id}.marks": total_marks,
+                f"{faculty_id}.comments": comments
+            }},
             upsert=True
         )
-        return jsonify({"message": "Marks updated successfully"}), 200
+        
+        return jsonify({"message": "Marks and comments updated successfully"}), 200
     except Exception as e:
-        print(f"Error updating marks: {str(e)}")
+        print(f"Error updating marks and comments: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @externals.route('/<department>/hod_interaction_marks/<faculty_id>', methods=['GET'])

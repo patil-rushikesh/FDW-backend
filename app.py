@@ -1869,11 +1869,12 @@ def submit_form(department, user_id):
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
 
-@app.route('/<department>/<user_id>/portfolio-given', methods=['POST'])
-def portfolio_given(department, user_id):
-    """Changes status from 'Portfolio_Mark_pending' to 'verification_pending' when portfolio marks are assigned"""
+
+
+@app.route('/<department>/<user_id>/hod-mark-given', methods=['POST'])
+def hod_mark_given(department, user_id):
+    """Changes status from 'Portfolio_Mark_pending' to 'Portfolio_Mark_Dean_pending' after HOD assigns marks"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -1889,6 +1890,42 @@ def portfolio_given(department, user_id):
             return jsonify({
                 "error": "Invalid status transition",
                 "message": "Form must be in Portfolio_Mark_pending status to proceed"
+            }), 400
+
+        # Update status to indicate Dean marks are pending
+        result = collection.update_one(
+            {"_id": user_id},
+            {"$set": {"status": "Portfolio_Mark_Dean_pending"}}
+        )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "HOD portfolio marks assigned successfully, awaiting Dean review",
+                "new_status": "Portfolio_Mark_Dean_pending"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/<department>/<user_id>/portfolio-given', methods=['POST'])
+def portfolio_given(department, user_id):
+    """Changes status from 'Portfolio_Mark_pending' or 'Portfolio_Mark_Dean_pending' to 'verification_pending' when portfolio marks are assigned"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status', 'pending')
+        if current_status != 'Portfolio_Mark_pending' and current_status != 'Portfolio_Mark_Dean_pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in Portfolio_Mark_pending or Portfolio_Mark_Dean_pending status to proceed"
             }), 400
 
         # Update status
