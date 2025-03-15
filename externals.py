@@ -386,10 +386,6 @@ def get_dean_external_mappings(department):
             # Get external details
             external = db_users.find_one({"_id": external_id})
             
-            # Check if dean has active assignments
-            has_assignments = bool(dean_assignments and 
-                                dean_id in dean_assignments and 
-                                dean_assignments[dean_id].get("assigned_faculty"))
 
             detailed_mappings.append({
                 "dean": {
@@ -403,10 +399,6 @@ def get_dean_external_mappings(department):
                     "name": external.get("full_name", "Unknown") if external else "Unknown",
                     "mail": external.get("mail", ""),
                     "organization": external.get("organization", "Unknown")
-                },
-                "status": {
-                    "has_assignments": has_assignments,
-                    "mapped_on": mapping.get("timestamp", "Unknown")
                 }
             })
 
