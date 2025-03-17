@@ -61,3 +61,31 @@ def send_username_password_mail(receiver_email, username, password):
     <p>Use these credentials to login to your account.</p>
     """
     return send_email(receiver_email, subject, email_body)
+
+def send_reset_password_mail(recipient_email, reset_link, user_name):
+    """Send password reset email"""
+    subject = "Password Reset Request - Faculty Development Workflow"
+    
+    # HTML email template
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+            <h2>Password Reset Request</h2>
+            <p>Hello {user_name},</p>
+            <p>We received a request to reset your password for the Faculty Development Workflow system.</p>
+            <p>Click the button below to reset your password. This link will expire in 1 hour.</p>
+            <p>
+                <a href="{reset_link}" 
+                   style="background-color: #4CAF50; color: white; padding: 10px 20px; 
+                          text-decoration: none; border-radius: 5px; display: inline-block;">
+                    Reset Password
+                </a>
+            </p>
+            <p>If you didn't request this password reset, you can safely ignore this email.</p>
+            <p>Best regards,<br>FDW Team</p>
+        </body>
+    </html>
+    """
+
+    # Send email using your existing email sending function
+    send_email(recipient_email, subject, html_content)

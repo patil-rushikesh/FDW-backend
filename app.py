@@ -20,6 +20,9 @@ import math
 from verification_commity import create_verification_blueprint
 # Add this import at the top
 from faculty_list import faculty_list
+# Add this import at the top of app.py
+from forgot_password import forgot_password
+
 
 
 # Load environment variables
@@ -1815,6 +1818,9 @@ verification_bp = create_verification_blueprint(mongo_fdw, db_users, department_
 app.register_blueprint(verification_bp)
 # Add this line after creating the Flask app
 app.register_blueprint(faculty_list)
+
+# Add this line with your other blueprint registrations
+app.register_blueprint(forgot_password)
 
 @app.route('/<department>/<user_id>/get-status', methods=['GET'])
 def get_status(department, user_id):
