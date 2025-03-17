@@ -184,11 +184,11 @@ def create_external(department):
         )
 
         # Send credentials via email
-        # email_sent = send_username_password_mail(
-        #     data['email'],
-        #     external_id,
-        #     external_id  # Password is same as ID
-        # )
+        email_sent = send_username_password_mail(
+            data['mail'],
+            external_id,
+            external_id  # Password is same as ID
+        )
 
         return jsonify({
             "message": "External reviewer added successfully",
