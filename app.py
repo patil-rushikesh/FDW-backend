@@ -1506,6 +1506,7 @@ def fill_template_document(data, user_id, department):
             '{total_for_C}' : str(round(data['C']['total_marks'])),
             '{total_for_B}' : str(round(data['B']['total_marks'])),
             '{total_for_A}' : str(round(data['A']['total_marks'])),
+            '{total_for_D}' : str(round(data['D']['total_marks'])),
             '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'])),
             '{grand_total}': str(round(data['grand_total']['grand_total'])),
             '{total_for_A_verified}' : str(round(data['A_verified_marks'])),
