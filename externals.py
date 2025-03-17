@@ -662,8 +662,8 @@ def externalFacultyMarks(department,external_id,faculty_id) :
         print(f"Error updating marks and comments: {str(e)}")
         return jsonify({"error": str(e)}), 500
     
-@externals.route('/<department>/dean_interaction_marks/<dean_id>/<faculty_id>', methods=['POST'])
-def deanFacultyMarks(department,dean_id,faculty_id) :
+@externals.route('/<department>/dean_interaction_marks/<dean_id>/<faculty_id>/<external_id>', methods=['POST'])
+def deanFacultyMarks(department,dean_id,faculty_id,external_id) :
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -703,12 +703,13 @@ def deanFacultyMarks(department,dean_id,faculty_id) :
             {"_id": "dean_assignments"},
             {
                 "$set": {
-                    f"{dean_id}.assigned_faculty.$[elem].isReviewed": True,
-                    f"{dean_id}.assigned_faculty.$[elem].total_marks": total_marks,
-                    f"{dean_id}.assigned_faculty.$[elem].comments": comments
+                    f"{dean_id}.{external_id}.$[elem].isReviewed": True,
+                    f"{dean_id}.{external_id}.$[elem].total_marks": total_marks,
+                    f"{dean_id}.{external_id}.$[elem].comments": comments
                 }
             },
-            array_filters=[{"elem._id": faculty_id}]
+            array_filters=[{"elem._id": faculty_id}],
+            upsert=True
         )
         isCompleted = check_and_update_review_completion(collection, faculty_id)
         if isCompleted : 
@@ -1067,5 +1068,3 @@ def get_all_hod_faculty_marks(department):
     except Exception as e:
         print(f"Error retrieving HOD faculty marks: {str(e)}")
         return jsonify({"error": str(e)}), 500
-
-
