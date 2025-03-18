@@ -390,8 +390,9 @@ def add_user():
         }
     }
             collection.insert_one(empty_doc)
-
-            return jsonify({"message": f"User added successfully to {department}"}), 201
+            mail_sent = send_username_password_mail(data["mail"], data["_id"], data["_id"])
+            if mail_sent :
+                return jsonify({"message": f"User added successfully to {department}"}), 201
         else:
             return jsonify({"error": "Invalid department"}), 400
 
