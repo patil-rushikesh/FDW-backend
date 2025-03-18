@@ -96,12 +96,15 @@ def validate_mobile(mobile):
     pattern = r'^[0-9]{10}$'
     return re.match(pattern, mobile) is not None
 
-def generate_external_id(collection):
+def generate_external_id(collection, department):
     """Generate unique external ID in format EXT2425001"""
     try:
         # Get current academic year
         current_year = datetime.datetime.now().year
         year_code = f"{str(current_year)[2:]}{str(current_year + 1)[2:]}"  # "2425"
+        
+        # Convert department to uppercase and take first 4 letters
+        dept_code = department.upper()[:4]
         
         # Find the latest external reviewer document to get the last used number
         externals_doc = collection.find_one({"_id": "externals"})
@@ -110,11 +113,11 @@ def generate_external_id(collection):
         else:
             # Find max number from existing IDs
             existing_ids = [r.get('_id', 'EXT0000000') for r in externals_doc.get('reviewers', [])]
-            max_number = max([int(id[-3:]) for id in existing_ids if id.startswith(f'EXT{year_code}')] or [0])
+            max_number = max([int(id[-3:]) for id in existing_ids if id.startswith(f'EXT{dept_code}{year_code}')] or [0])
             next_number = max_number + 1
 
         # Format the ID
-        return f"EXT{year_code}{str(next_number).zfill(3)}"
+        return f"EXT{dept_code}{year_code}{str(next_number).zfill(3)}"
     except Exception as e:
         print(f"Error generating external ID: {str(e)}")
         raise
@@ -146,7 +149,7 @@ def create_external(department):
             return jsonify({"error": "Invalid department"}), 400
 
         # Generate unique external ID
-        external_id = generate_external_id(collection)
+        external_id = generate_external_id(collection, department)
 
         # Create external reviewer document
         external_doc = {
@@ -184,11 +187,11 @@ def create_external(department):
         )
 
         # Send credentials via email
-        # email_sent = send_username_password_mail(
-        #     data['email'],
-        #     external_id,
-        #     external_id  # Password is same as ID
-        # )
+        email_sent = send_username_password_mail(
+            data['mail'],
+            external_id,
+            external_id  # Password is same as ID
+        )
 
         return jsonify({
             "message": "External reviewer added successfully",
