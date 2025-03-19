@@ -1492,8 +1492,8 @@ def fill_template_document(data, user_id, department):
             '{Assis_C_total_marks}': str(Assis_C_total_marks),
             
             # New section D (Portfolio details)
-            '{Department_portfolio}': "Not added" if not data['D'].get('departmentLevelPortfolio') else data['D']['departmentLevelPortfolio'],
-            '{Institute_Portfolio}': "Not added" if not data['D'].get('instituteLevelPortfolio') else data['D']['instituteLevelPortfolio'],
+            '{Department_portfolio}': "Not Applicable" if not data['D'].get('departmentLevelPortfolio') else data['D']['departmentLevelPortfolio'],
+            '{Institute_Portfolio}': "Not Applicable" if not data['D'].get('instituteLevelPortfolio') else data['D']['instituteLevelPortfolio'],
             '{self_awarded_marks}': str(self_awarded_marks),
             '{hodMarks}': str(hod_marks),
             '{section_d_total}': str(total_marks_D),
