@@ -1,0 +1,18 @@
+fs.chunks
+fs.files
+
+
+/** 
+* Paste one or more documents here
+*/
+{
+  "name": "Dr. Govind Kulkarni",
+  "dept": "Mechanical",
+  "role": "Professor",
+  "mail": "govind@pccoepune.org",
+  "mob": "1234567890",
+  "desg": "Director",
+  "higherDean": "",
+  "isInVerificationPanel": false,
+  "facultyToVerify": {}
+}
