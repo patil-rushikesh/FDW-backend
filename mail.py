@@ -9,7 +9,7 @@ def send_email(receiver_email, subject, email_body):
     sender_email = os.getenv('EMAIL_ADDRESS')
     sender_password = os.getenv('EMAIL_PASSWORD')
 
-    msg = MIMEMultipart("related")  # Use "related" to handle inline images properly
+    msg = MIMEMultipart("related") 
     msg["From"] = sender_email
     msg["To"] = receiver_email
     msg["Subject"] = subject
@@ -18,12 +18,11 @@ def send_email(receiver_email, subject, email_body):
     body = f"""
     <html>
     <body>    
-    <p><img src="cid:logo" alt="Team AANSH" style="width:100%;height:30%;display:block;margin:auto;"></p>
     <p>Dear User,</p>
-    <p>We're excited to have you on board with <b>Team AANSH</b>.</p>
     {email_body}
     <p>Sincerely,<br>
-    Team AANSH</p>
+    Pimpri Chinchwad College of Engineering</p>
+    <p><img src="cid:logo" alt="PCCOE" style="width:100%;max-width:200px;height:auto;display:block;margin:20px auto 0;"></p>
     </body>
     </html>
     """
@@ -53,13 +52,13 @@ def send_email(receiver_email, subject, email_body):
 
 def send_username_password_mail(receiver_email, username, password):
     """Send username and password via email"""
-    subject = "Team AANSH - Account Credentials"
+    subject = "PCCOE Faculty Apprisal - Account Credentials"
     email_body = f"""
     <p>Your account credentials are as follows:</p>
     <p>Username: <b>{username}</b></p>
     <p>Password: <b>{password}</b></p>
     <p>Use these credentials to login to your account.</p>
-    """
+    <p style="color: red; font-weight: bold;">Please change your password after the first login.</p>    """
     return send_email(receiver_email, subject, email_body)
 
 def send_reset_password_mail(recipient_email, reset_link, user_name):
