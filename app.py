@@ -420,11 +420,8 @@ def get_user(user_id):
 @app.route('/users/<string:user_id>', methods=['PUT'])
 def update_user(user_id):
     data = request.json
-    allowed_fields = ["name", "role", "dept", "mail", "mob"]
+    allowed_fields = ["name", "role", "dept", "mail", "mob","desg"]
     updated_data = {k: v for k, v in data.items() if k in allowed_fields}
-    
-    if "desg" not in data:
-       data["desg"] = "Faculty"
 
     if not updated_data:
         return jsonify({"error": "No valid fields to update"}), 400
