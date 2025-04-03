@@ -190,7 +190,8 @@ def create_external(department):
         email_sent = send_username_password_mail(
             data['mail'],
             external_id,
-            external_id  # Password is same as ID
+            external_id,
+            data['full_name']  # Password is same as ID
         )
 
         return jsonify({
