@@ -2048,6 +2048,60 @@ def verify_authority(department, user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     
+@app.route('/<department>/send-to-director', methods=['POST'])
+def send_to_director(department):
+    """Changes status from 'Done' to 'SentToDirector' for multiple users at once"""
+    try:
+        data = request.get_json()
+        if not data or 'user_ids' not in data or not isinstance(data['user_ids'], list):
+            return jsonify({"error": "Missing required field: user_ids (array)"}), 400
+        
+        user_ids = data['user_ids']
+        if not user_ids:
+            return jsonify({"error": "Empty user_ids array provided"}), 400
+
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Find users with 'Done' status
+        valid_users = collection.find({
+            "_id": {"$in": user_ids},
+            "status": "done"
+        })
+        
+        valid_user_ids = [user["_id"] for user in valid_users]
+        
+        if not valid_user_ids:
+            return jsonify({
+                "error": "No valid users found",
+                "message": "No users with 'Done' status found among the provided IDs"
+            }), 404
+
+        # Update status for all valid users
+        result = collection.update_many(
+            {
+                "_id": {"$in": valid_user_ids},
+                "status": "done"
+            },
+            {"$set": {"status": "SentToDirector"}}
+        )
+
+        # Check results
+        success_count = result.modified_count
+        skipped_ids = [user_id for user_id in user_ids if user_id not in valid_user_ids]
+
+        return jsonify({
+            "message": f"Successfully sent {success_count} form(s) to director",
+            "successful_ids": valid_user_ids,
+            "skipped_ids": skipped_ids,
+            "new_status": "SentToDirector"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    
+
 
 #To get all the deans
 # Add this after your existing routes

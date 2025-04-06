@@ -907,7 +907,7 @@ def get_all_faculties_marks(department):
             faculty_data = {}
             
             # Calculate final marks if status is "done"
-            if faculty.get("status") == "done" and faculty.get("grand_verified_marks"):
+            if (faculty.get("status") == "done" or faculty.get("status") == "SentToDirector") and faculty.get("grand_verified_marks"):
                 user = db_users.find_one({"_id": faculty_id})
                 faculty_data = {
                 "faculty_info": {
@@ -949,8 +949,8 @@ def get_all_faculties_marks(department):
                 faculty_data["interaction_marks"]["total_reviews"] = len(interaction_marks)
 
                 verified_marks = faculty.get("grand_verified_marks", 0)
-                scaled_verified = (verified_marks / 1000) * 75  # Scale verified marks to 75
-                scaled_interaction = (interaction_avg / 100) * 25  # Scale interaction to 25
+                scaled_verified = (verified_marks / 1000) * 85  # Scale verified marks to 85
+                scaled_interaction = (interaction_avg / 100) * 15  # Scale interaction to 15
                 
                 faculty_data["final_marks"] = {
                     "verified_marks": verified_marks,
