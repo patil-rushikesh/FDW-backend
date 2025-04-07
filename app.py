@@ -32,7 +32,7 @@ app = Flask(__name__)
 # Configure CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5173"],  # Your React app's URL
+        "origins": ["http://10.10.1.18:5173", "http://127.0.0.1:5173","http://localhost:5173"],  # Your React app's URLs
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
