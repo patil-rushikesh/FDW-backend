@@ -94,6 +94,7 @@ def get_faculty_list(department):
                     "role": role,
                     "designation": user_profile.get("desg", "Faculty"),  # Added designation field
                     "grand_marks": faculty_data.get("grand_total", 0),
+                    "grand_verified_marks": faculty_data.get("grand_verified_marks", 0),
                     "status": faculty_data.get("status", "pending")
                 }
                 faculty_list.append(faculty_info)
