@@ -1249,7 +1249,11 @@ def fill_template_document(data, user_id, department):
             assSelfawardedmarks = data['D']['selfAwardedMarks']
             assTotalMarks = assSelfawardedmarks + sumMarks_hod_dean
         
-        
+        extraMarks = 0
+        if desg == 'Dean' or desg == 'HOD':
+            extraMarks = 100
+        if desg == 'Associate Dean':
+            extraMarks = 50 
         
         print('-----------before placeholders update-----------')
         
@@ -1504,7 +1508,7 @@ def fill_template_document(data, user_id, department):
             # Section E placeholders
             # '{section_E_total}': str(data['E']['total_marks']),
             '{section_E_total}': str(data.get('E', {}).get('total_marks', 0)),
-            
+            '{extra_marks}' : str(extraMarks),
             # Grand total
             '{total_for_C}' : str(round(data['C']['total_marks'])),
             '{total_for_B}' : str(round(data['B']['total_marks'])),
