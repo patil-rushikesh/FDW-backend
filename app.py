@@ -32,7 +32,7 @@ app = Flask(__name__)
 # Configure CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://localhost:5173"],  # Your React app's URL
+        "origins": ["http://10.10.1.18:5173", "http://127.0.0.1:5173","http://localhost:5173"],  # Your React app's URLs
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -1249,7 +1249,11 @@ def fill_template_document(data, user_id, department):
             assSelfawardedmarks = data['D']['selfAwardedMarks']
             assTotalMarks = assSelfawardedmarks + sumMarks_hod_dean
         
-        
+        extraMarks = 0
+        if desg == 'Dean' or desg == 'HOD':
+            extraMarks = 100
+        if desg == 'Associate Dean':
+            extraMarks = 50 
         
         print('-----------before placeholders update-----------')
         
@@ -1504,7 +1508,7 @@ def fill_template_document(data, user_id, department):
             # Section E placeholders
             # '{section_E_total}': str(data['E']['total_marks']),
             '{section_E_total}': str(data.get('E', {}).get('total_marks', 0)),
-            
+            '{extra_marks}' : str(extraMarks),
             # Grand total
             '{total_for_C}' : str(round(data['C']['total_marks'])),
             '{total_for_B}' : str(round(data['B']['total_marks'])),

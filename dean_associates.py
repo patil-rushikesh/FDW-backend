@@ -105,7 +105,8 @@ def get_associate_deans(dean_id):
                     "name": associate_data.get("name", ""),
                     "role": associate_data.get("role", ""),
                     "department": department,
-                    "status": faculty_status
+                    "status": faculty_status,
+                    "designation": associate_data.get("desg", ""),
                 }
                 associates_list.append(associate_info)
 

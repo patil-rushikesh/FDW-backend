@@ -46,7 +46,7 @@ def request_password_reset():
         }, JWT_SECRET, algorithm='HS256')
 
         # Create reset link
-        reset_link = f"http://localhost:5173/reset-password?token={token}"
+        reset_link = f"http://10.10.1.18:5173/reset-password?token={token}"
 
         # Send email with reset link
         send_reset_password_mail(user_email, reset_link, user['name'])
