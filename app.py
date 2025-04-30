@@ -32,7 +32,7 @@ app = Flask(__name__)
 # Configure CORS
 CORS(app, resources={
     r"/*": {
-        "origins": ["http://10.10.1.18:5173", "http://127.0.0.1:5173","http://localhost:5173"],  # Your React app's URLs
+        "origins": ["http://10.10.1.18:5173", "http://127.0.0.1:5173","http://localhost:5173","*"],  # Your React app's URLs
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         "allow_headers": ["Content-Type", "Authorization"],
         "supports_credentials": True
@@ -390,11 +390,8 @@ def add_user():
         }
     }
             collection.insert_one(empty_doc)
-            mail_sent = send_username_password_mail(data["mail"], data["_id"], data["_id"],data["name"])
-            if mail_sent:
-                return jsonify({"message": f"User added successfully to {department}"}), 201
-            else:
-                return jsonify({"error": "Failed to send email notification"}), 500
+
+            return jsonify({"message": f"User added successfully to {department}"}), 201
         else:
             return jsonify({"error": "Invalid department"}), 400
 

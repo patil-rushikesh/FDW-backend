@@ -105,6 +105,8 @@ def generate_external_id(collection, department):
         
         # Convert department to uppercase and take first 4 letters
         dept_code = department.upper()[:4]
+        if department == "Computer(Regional)":
+            dept_code = "COMPR"
         
         # Find the latest external reviewer document to get the last used number
         externals_doc = collection.find_one({"_id": "externals"})
