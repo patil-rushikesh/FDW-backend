@@ -22,6 +22,8 @@ from verification_commity import create_verification_blueprint
 from faculty_list import faculty_list
 # Add this import at the top of app.py
 from forgot_password import forgot_password
+# Add this import at the top of app.py
+from user_profile import user_profile
 
 
 
@@ -1512,12 +1514,12 @@ def fill_template_document(data, user_id, department):
             '{total_for_A}' : str(round(data['A']['total_marks'])),
             '{total_for_D}' : str(round(data['D']['total_marks'])),
             '{total_for_B_verified}' : str(round(data['B']['final_verified_marks'])),
-            '{grand_total}': str(round(data['grand_total']['grand_total'])),
+            '{grand_total}': str(min(round(data['grand_total']['grand_total'] + extraMarks),1000)),
             '{total_for_A_verified}' : str(round(data['A_verified_marks'])),
             '{total_for_C_verified}' : str(round(data['C_verified_marks'])),
             '{total_for_D_verified}' : str(round(data['D_verified_marks'])),
             '{total_for_E_verified}' : str(round(data['E_verified_marks'])),
-            '{grand_verified_marks}': str(round(data['grand_verified_marks'])),
+            '{grand_verified_marks}': str(min(round(data['grand_verified_marks']+extraMarks),1000)),
         })
         
         print('-----------after placeholders update-----------')
@@ -1822,6 +1824,12 @@ app.register_blueprint(faculty_list)
 
 # Add this line with your other blueprint registrations
 app.register_blueprint(forgot_password)
+
+# Add this after creating the Flask app and before the routes
+app.register_blueprint(user_profile)
+
+# After the MongoDB configuration, add this to make the db_users available to the blueprint
+app.config['db_users'] = db_users
 
 @app.route('/<department>/<user_id>/get-status', methods=['GET'])
 def get_status(department, user_id):
