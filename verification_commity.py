@@ -34,6 +34,8 @@ department_collections = {
 
 from flask import Blueprint, jsonify, request
 
+
+
 def create_verification_blueprint(mongo_fdw, db_users, department_collections):
     verification_bp = Blueprint('verification', __name__)
 
@@ -262,13 +264,12 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
+        
+
+    
 
     @verification_bp.route('/faculty_to_verify/<verifier_id>', methods=['GET'])
     def get_assigned_faculties(verifier_id):
-        """
-        Get assigned faculty details for a specific committee head
-        Returns faculty data in the format stored in facultyToVerify
-        """
         try:
             # Find the committee head in users collection
             committee_head = db_users.find_one({"_id": verifier_id})
@@ -281,16 +282,41 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
 
             # Get faculty data from facultyToVerify for all departments
             faculty_data = committee_head.get("facultyToVerify", {})
-
-            return jsonify({
-               
-                    "_id": verifier_id,
-                    "name": committee_head.get("name"),
-                    "assigned_faculties": faculty_data
+            
+            # Fetch status for each faculty in each department
+            enriched_faculty_data = {}
+            for department, faculties in faculty_data.items():
+                enriched_faculties = []
+                collection = department_collections.get(department)
                 
+                if collection is not None:  # Fixed comparison
+                    for faculty in faculties:
+                        faculty_id = faculty.get("_id")
+                        faculty_copy = faculty.copy()  # Create a copy to avoid modifying the original
+                        
+                        # Fetch status from the department collection
+                        user_doc = collection.find_one({"_id": faculty_id})
+                        if user_doc:
+                            current_status = user_doc.get("status", "pending")
+                            faculty_copy["status"] = current_status
+                        else:
+                            faculty_copy["status"] = "unknown"
+                            
+                        enriched_faculties.append(faculty_copy)
+                    
+                    enriched_faculty_data[department] = enriched_faculties
+                else:
+                    enriched_faculty_data[department] = faculties  # Keep original if department not found
+            
+            return jsonify({
+                "_id": verifier_id,
+                "name": committee_head.get("name"),
+                "assigned_faculties": enriched_faculty_data
             }), 200
 
         except Exception as e:
+            import traceback
+            print(traceback.format_exc())
             return jsonify({"error": str(e)}), 500
 
     return verification_bp
