@@ -1873,13 +1873,13 @@ def submit_form(department, user_id):
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "Portfolio_Mark_pending"}}
+            {"$set": {"status": "verification_pending"}}
         )
 
         if result.modified_count > 0:
             return jsonify({
                 "message": "Form submitted successfully",
-                "new_status": "Portfolio_Mark_pending"
+                "new_status": "verification_pending"
             }), 200
         return jsonify({"error": "No changes made"}), 400
 
@@ -1926,7 +1926,7 @@ def hod_mark_given(department, user_id):
 
 @app.route('/<department>/<user_id>/portfolio-given', methods=['POST'])
 def portfolio_given(department, user_id):
-    """Changes status from 'Portfolio_Mark_pending' or 'Portfolio_Mark_Dean_pending' to 'verification_pending' when portfolio marks are assigned"""
+    """Changes status from 'Portfolio_Mark_pending' or 'Portfolio_Mark_Dean_pending' to 'authority_verification_pending' when portfolio marks are assigned"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -1947,13 +1947,13 @@ def portfolio_given(department, user_id):
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "verification_pending"}}
+            {"$set": {"status": "authority_verification_pending"}}
         )
 
         if result.modified_count > 0:
             return jsonify({
                 "message": "Portfolio marks assigned successfully",
-                "new_status": "verification_pending"
+                "new_status": "authority_verification_pending"
             }), 200
         return jsonify({"error": "No changes made"}), 400
 
@@ -1962,7 +1962,7 @@ def portfolio_given(department, user_id):
 
 @app.route('/<department>/<verifier_id>/<user_id>/verify-research', methods=['POST'])
 def verify_research(department,verifier_id, user_id):
-    """Changes status from 'verification_pending' to 'authority_verification_pending'"""
+    """Changes status from 'verification_pending' to 'Portfolio_Mark_pending'"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -1983,7 +1983,7 @@ def verify_research(department,verifier_id, user_id):
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "authority_verification_pending"}}
+            {"$set": {"status": "Portfolio_Mark_pending"}}
         )
         
         committee_head = db_users.find_one({"_id": verifier_id})
@@ -2012,7 +2012,7 @@ def verify_research(department,verifier_id, user_id):
         if result.modified_count > 0:
             return jsonify({
                 "message": "Research verification completed",
-                "new_status": "authority_verification_pending",
+                "new_status": "Portfolio_Mark_pending",
                 "department": department,
                 "faculty_id": user_id,
                 "verifier_id": verifier_id

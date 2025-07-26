@@ -177,15 +177,21 @@ def create_verification_blueprint(mongo_fdw, db_users, department_collections):
             for committee_key, faculty_list in data.items():
                 committee_id = committee_key.split(" ")[0]  # Extract ID from "ID (Name)"
                 
-                # Get faculty names for the IDs
+                # Get faculty names for the IDs and preserve existing approval status
                 faculty_data = []
                 for faculty_id in faculty_list:
                     faculty = db_users.find_one({"_id": faculty_id})
                     if faculty:
+                        # Check if this faculty already exists in the committee head's list
+                        existing_faculty = None
+                        if "facultyToVerify" in db_users.find_one({"_id": committee_id}) and department in db_users.find_one({"_id": committee_id}).get("facultyToVerify", {}):
+                            existing_faculties = db_users.find_one({"_id": committee_id})["facultyToVerify"][department]
+                            existing_faculty = next((f for f in existing_faculties if f.get("_id") == faculty_id), None)
+                        
                         faculty_data.append({
                             "_id": faculty_id,
                             "name": faculty.get("name", "Unknown"),
-                            "isApproved": False
+                            "isApproved": existing_faculty.get("isApproved", False) if existing_faculty else False
                         })
 
                 # Update committee head's facultyToVerify
