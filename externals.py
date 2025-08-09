@@ -22,9 +22,6 @@ mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
 db_users = mongo.db.users
 db_signin = mongo.db.signin
 
-app.config["MONGO_URI_FDW"] = os.getenv("MONGO_URI_FDW")
-mongo_fdw = PyMongo(app, uri=app.config["MONGO_URI_FDW"])
-
 # Department-based collections in the FDW database
 department_collections = {
     "AIML": mongo_fdw.db.AIML,
@@ -207,9 +204,92 @@ def create_external(department):
         print(f"Error creating external reviewer: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@externals.route('/create-external', methods=['POST'])
+def create_college_external():
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+
+        # Validate required fields
+        required_fields = ["full_name", "mail", "mob", "desg", "specialization", "organization"]
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({"error": f"Missing required field: {field}"}), 400
+
+        # Validate email format
+        if not validate_email(data['mail']):
+            return jsonify({"error": "Invalid email format"}), 400
+
+        # Validate mobile number
+        if not validate_mobile(data['mob']):
+            return jsonify({"error": "Invalid mobile number format. Must be 10 digits"}), 400
+
+        # Get department collection
+        collection = mongo_fdw.db.PCCoE
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Generate unique external ID
+        external_id = generate_external_id(collection, 'PCCoE')
+
+        # Create external reviewer document
+        external_doc = {
+            "_id": external_id,
+            "full_name": data['full_name'],
+            "mail": data['mail'],
+            "mob": data['mob'],
+            "desg": data['desg'],
+            "specialization": data['specialization'],
+            "organization": data['organization'],
+            "address": data.get('address', ''),  # Optional field
+            "isExternal": True,  # Add isExternal flag
+        }
+
+        # Add to signin collection with password same as ID
+        salt = bcrypt.gensalt()
+        hashed_password = bcrypt.hashpw(external_id.encode('utf-8'), salt)
+        db_signin.insert_one({"_id": external_id, "password": hashed_password})
+
+        # Add to db_users collection
+        user_doc = {
+            **external_doc,  # Include all fields from external_doc
+            "role": "external",  # Add role
+            "isExternal": True,  # Add isExternal flag
+            "facultyToReview": []  # Initialize empty list for faculty assignments
+        }
+        db_users.insert_one(user_doc)
+
+        # Update or create externals document in department collection
+        result = collection.update_one(
+            {"_id": "externals"},
+            {"$push": {"reviewers": external_doc}},
+            upsert=True
+        )
+
+        # Send credentials via email
+        email_sent = send_username_password_mail(
+            data['mail'],
+            external_id,
+            external_id,
+            data['full_name']  # Password is same as ID
+        )
+
+        return jsonify({
+            "message": "External reviewer added successfully",
+            "data": external_doc,
+            # "credentials_sent": email_sent
+        }), 201
+        
+
+    except Exception as e:
+        print(f"Error creating external reviewer: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 # Add this new route after your existing code
 @externals.route('/<department>/get-externals', methods=['GET'])
-def get_externals(department):
+def get_college_externals(department):
     try:
         # Get department collection
         collection = department_collections.get(department)
@@ -230,6 +310,32 @@ def get_externals(department):
     except Exception as e:
         print(f"Error retrieving external reviewers: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+# Add this new route after your existing code
+@externals.route('/get-externals', methods=['GET'])
+def get_externals():
+    try:
+        # Get department collection
+        collection = mongo_fdw.db.PCCoE
+        if collection is None:
+            return jsonify({"error": "Invalid Collection"}), 400
+
+        # Find the externals document
+        externals_doc = collection.find_one({"_id": "externals"})
+        if not externals_doc:
+            return jsonify({"message": "No external reviewers found", "data": []}), 200
+
+        # Return the list of reviewers
+        return jsonify({
+            "message": "External reviewers retrieved successfully",
+            "data": externals_doc.get('reviewers', [])
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving external reviewers: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 
 @externals.route('/<department>/assign-externals', methods=['POST'])
 def assign_externals(department):
