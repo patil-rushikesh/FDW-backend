@@ -402,6 +402,73 @@ def assign_externals(department):
         print(f"Error assigning external reviewers: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
+@externals.route('/assign-externals', methods=['POST'])
+def assign_college_externals():
+    """
+    Updated JSON format:
+    {
+        "external_assignments": {
+            "EXT2425001": ["faculty_id1", "faculty_id2"],
+            "EXT2425002": ["faculty_id3", "faculty_id4"]
+        }
+    }
+    """
+    try:
+        collection = mongo_fdw.db.PCCoE
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        data = request.get_json()
+        if not data or 'external_assignments' not in data:
+            return jsonify({"error": "Missing external assignments"}), 400
+
+        # Get existing externals document
+        externals_doc = collection.find_one({"_id": "externals"})
+        if not externals_doc or 'reviewers' not in externals_doc:
+            return jsonify({"error": "No external reviewers found"}), 404
+
+        # Create assignments structure using external IDs
+        assignments = {}
+        for reviewer in externals_doc['reviewers']:
+            external_id = reviewer['_id']
+            if external_id in data['external_assignments']:
+                faculty_list = []
+                for faculty_id in data['external_assignments'][external_id]:
+                    faculty = db_users.find_one({"_id": faculty_id})
+                    if faculty:
+                        faculty_list.append({
+                            "_id": faculty_id,
+                            "name": faculty.get("name", "Unknown"),
+                            "department": faculty.get("dept", "Unknown"),
+                            "isReviewed": False,
+                            "isDirectorMarksGiven": False,
+                            "total_marks": 0
+                        })
+                assignments[external_id] = {
+                    "reviewer_info": reviewer,
+                    "assigned_faculty": faculty_list
+                }
+                
+        print(assignments)
+
+        # Update assignments
+        result = collection.update_one(
+            {"_id": "externals_assignments"},
+            {"$set": assignments},
+            upsert=True
+        )
+
+    
+        return jsonify({
+            "message": "External reviewers assigned successfully",
+            "assignments": assignments
+        }), 200
+        
+    except Exception as e:
+        print(f"Error assigning external reviewers: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 @externals.route('/<department>/external-assignments', methods=['GET'])
 def get_external_assignments(department):
     """Get all external reviewer assignments for a department"""
@@ -426,6 +493,32 @@ def get_external_assignments(department):
     except Exception as e:
         print(f"Error retrieving external assignments: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@externals.route('/external-assignments', methods=['GET'])
+def get_college_external_assignments():
+    """Get all external reviewer assignments for a department"""
+    try:
+        collection = mongo_fdw.db.PCCoE
+        if collection is None:
+            return jsonify({"error": "Invalid Collection"}), 400
+
+        assignments = collection.find_one({"_id": "externals_assignments"})
+        if not assignments:
+            return jsonify({
+                "message": "No external assignments found",
+                "data": {}
+            }), 200
+
+        assignments.pop('_id', None)
+        return jsonify({
+            "message": "External assignments retrieved successfully",
+            "data": assignments
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving external assignments: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 
 @externals.route('/<department>/external-assignments/<id>', methods=['GET'])
 def get_external_specific_assignments(department, id):
@@ -934,6 +1027,111 @@ def get_hod_interaction_marks(department, faculty_id):
     except Exception as e:
         print(f"Error retrieving HOD marks: {str(e)}")
         return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/director_interaction_marks/<external_id>/<faculty_id>', methods=['POST'])
+def facultyDirectorMarks(department,external_id, faculty_id):
+    try:
+        collection_faculty = department_collections.get(department)
+        collection_marks = mongo_fdw.db.PCCoE
+        if collection_faculty is None or collection_marks is None:
+            return jsonify({"error": "Invalid collection"}), 400
+        faculty_collection = collection_faculty.find_one({"_id": faculty_id})
+        if not faculty_collection:
+            return jsonify({"error": "Faculty not found"}), 404
+        
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+        if 'total_marks' not in data:
+            return jsonify({"error": "Missing required field: marks"}), 400
+        
+        total_marks = data['total_marks']
+        comments = data.get('comments', '')  # Get comments from request data, default empty string
+        
+        # Update faculty document with marks and comments
+        collection_faculty.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "total_marks_by_hod_for_interaction": total_marks,
+                "comments_by_hod_for_interaction": comments
+            }}
+        )
+        collection_marks.update_one(
+            {"_id": "externals_assignments"},
+            {
+                "$set": {
+                    f"{external_id}.assigned_faculty.$[elem].director_total_marks": total_marks,
+                    f"{external_id}.assigned_faculty.$[elem].isDirectorMarksGiven": True,
+                    }
+            },
+            array_filters=[{"elem._id": faculty_id}]
+        )
+
+        
+        # Update interaction_marks document with marks and comments
+        collection_marks.update_one(
+            {"_id": "interaction_marks"},
+            {
+                "$set": {
+                    f"{faculty_id}.hod_marks": total_marks,
+                    f"{faculty_id}.hod_comments": comments
+                }
+            },
+            upsert=True
+        )
+        
+        # Update HOD-specific marks document with marks and comments
+        collection_marks.update_one(
+            {"_id": "interaction-mark-by-director"},
+            {"$set": {
+                f"{faculty_id}.marks": total_marks,
+                f"{faculty_id}.comments": comments
+            }},
+            upsert=True
+        )
+        isCompleted = check_and_update_review_completion(collection_faculty, faculty_id)
+        if isCompleted : 
+            collection_faculty.update_one(
+            {"_id": faculty_id},
+            {"$set": {
+                "status": "done"
+            }}
+        )
+        
+        return jsonify({"message": "Marks and comments updated successfully"}), 200
+    except Exception as e:
+        print(f"Error updating marks and comments: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+@externals.route('/<department>/director_interaction_marks/<faculty_id>', methods=['GET'])
+def get_director_interaction_marks(department, faculty_id):
+    """Get Director interaction marks for a specific faculty"""
+    try:
+        collection_faculty = department_collections.get(department)
+        collection_marks = mongo_fdw.db.PCCoE
+        if collection_faculty is None or collection_marks is None:
+            return jsonify({"error": "Invalid collection"}), 400
+
+        # Get marks from Director marks document
+        director_marks = collection_marks.find_one({"_id": "interaction-mark-by-director"})
+        if not director_marks or faculty_id not in director_marks:
+            return jsonify({
+                "message": "No Director marks found for this faculty",
+                "data": None
+            }), 200
+
+        return jsonify({
+            "message": "Director marks retrieved successfully",
+            "faculty_id": faculty_id,
+            "marks": director_marks[faculty_id]
+        }), 200
+
+    except Exception as e:
+        print(f"Error retrieving Director marks: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
+
 
 @externals.route('/<department>/all_interaction_marks/<faculty_id>', methods=['GET'])
 def get_all_interaction_marks(department, faculty_id):
