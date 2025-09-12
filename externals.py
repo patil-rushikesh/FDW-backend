@@ -1432,16 +1432,31 @@ def get_all_faculties_marks(department):
             
             if not user:
                 continue
+            
+            # Get faculty designation for extra marks calculation
+            designation = user.get("desg", "Faculty")
+            
+            # Calculate extra marks based on designation
+            extra_marks = 0
+            designation_bonus_given = False
+            if designation == "HOD" or designation == "Dean":
+                extra_marks = 100
+                designation_bonus_given = True
+            elif designation == "Associate Dean":
+                extra_marks = 50
+                designation_bonus_given = True
                 
             # Basic faculty info
             faculty_data = {
                 "faculty_info": {
                     "id": faculty_id,
                     "name": user.get("name", "Unknown"),
-                    "designation": faculty.get("desg", "Faculty"),
-                    "role": user.get("role", "faculty"),  # Added faculty role
+                    "designation": designation,
+                    "role": user.get("role", "faculty"),
                     "department": department,
-                    "status": faculty.get("status", "pending")
+                    "status": faculty.get("status", "pending"),
+                    "designation_bonus_given": designation_bonus_given,
+                    "extra_marks_for_designation": extra_marks
                 },
                 "interaction_marks": {
                     "external": marks.get("external_marks", {
@@ -1477,25 +1492,53 @@ def get_all_faculties_marks(department):
             # Add final marks calculation if grand_verified_marks exists
             if faculty.get("grand_verified_marks"):
                 verified_marks = faculty.get("grand_verified_marks", 0)
-                scaled_verified = (verified_marks / 1000) * 850  # Scale verified marks to 85
-                scaled_interaction = (interaction_avg / 100) * 150  # Scale interaction to 15
+                # Add extra marks to verified marks based on designation
+                verified_marks_with_bonus = verified_marks + extra_marks
+                
+                # Ensure verified_marks_with_bonus doesn't exceed 1000
+                capped_verified_marks = min(verified_marks_with_bonus, 1000)
+                
+                scaled_verified = (capped_verified_marks / 1000) * 850  # Scale verified marks to 85%
+                scaled_interaction = (interaction_avg / 100) * 150  # Scale interaction to 15%
+                
+                # Calculate total and cap at 1000
+                calculated_total = scaled_verified + scaled_interaction
+                final_total = min(calculated_total, 1000)
                 
                 faculty_data["final_marks"] = {
                     "verified_marks": verified_marks,
+                    "extra_marks_for_designation": extra_marks,
+                    "verified_marks_with_bonus": verified_marks_with_bonus,
+                    "capped_verified_marks": capped_verified_marks,
                     "scaled_verified_marks": round(scaled_verified, 2),
                     "interaction_average": interaction_avg,
                     "scaled_interaction_marks": round(scaled_interaction, 2),
-                    "total_marks": round(scaled_verified + scaled_interaction, 2)
+                    "calculated_total": round(calculated_total, 2),
+                    "total_marks": round(final_total, 2),
+                    "is_capped_at_1000": final_total == 1000
                 }
             else:
                 # Add placeholder for faculty without verified marks
+                verified_marks_with_bonus = extra_marks
+                capped_verified_marks = min(verified_marks_with_bonus, 1000)
+                scaled_verified = (capped_verified_marks / 1000) * 850
+                scaled_interaction = (interaction_avg / 100) * 150
+                
+                calculated_total = scaled_verified + scaled_interaction
+                final_total = min(calculated_total, 1000)
+                
                 faculty_data["final_marks"] = {
                     "verified_marks": 0,
-                    "scaled_verified_marks": 0,
+                    "extra_marks_for_designation": extra_marks,
+                    "verified_marks_with_bonus": verified_marks_with_bonus,
+                    "capped_verified_marks": capped_verified_marks,
+                    "scaled_verified_marks": round(scaled_verified, 2),
                     "interaction_average": interaction_avg,
-                    "scaled_interaction_marks": round((interaction_avg / 100) * 150, 2),
-                    "total_marks": round((interaction_avg / 100) * 150, 2),
-                    "missing_verified_marks": True
+                    "scaled_interaction_marks": round(scaled_interaction, 2),
+                    "calculated_total": round(calculated_total, 2),
+                    "total_marks": round(final_total, 2),
+                    "missing_verified_marks": True,
+                    "is_capped_at_1000": final_total == 1000
                 }
                 
             faculty_marks_list.append(faculty_data)
@@ -1506,6 +1549,8 @@ def get_all_faculties_marks(department):
         no_reviews = sum(1 for f in faculty_marks_list if f["interaction_marks"]["total_reviews"] == 0)
         final_marks_count = sum(1 for f in faculty_marks_list if "final_marks" in f)
         missing_verified_marks = sum(1 for f in faculty_marks_list if f.get("final_marks", {}).get("missing_verified_marks", False))
+        designation_bonus_count = sum(1 for f in faculty_marks_list if f["faculty_info"]["designation_bonus_given"])
+        capped_marks_count = sum(1 for f in faculty_marks_list if f.get("final_marks", {}).get("is_capped_at_1000", False))
 
         return jsonify({
             "message": "All faculty marks retrieved successfully",
@@ -1517,7 +1562,9 @@ def get_all_faculties_marks(department):
                 "partially_reviewed": partial_reviews,
                 "not_reviewed": no_reviews,
                 "final_marks_calculated": final_marks_count,
-                "missing_verified_marks": missing_verified_marks
+                "missing_verified_marks": missing_verified_marks,
+                "designation_bonus_given": designation_bonus_count,
+                "marks_capped_at_1000": capped_marks_count
             }
         }), 200
 

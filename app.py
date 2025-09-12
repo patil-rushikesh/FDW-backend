@@ -1749,6 +1749,24 @@ def generate_document(department, user_id):
                     pass
         pythoncom.CoUninitialize()
 
+@app.route('/getEvaluationStatus/<user_id>/<department>', methods=['GET'])
+def get_evaluation_status(user_id, department):
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        user_doc = collection.find_one({"_id": user_id})
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get the evaluation status
+        evaluation_status = user_doc.get("status")
+        return jsonify({"status": evaluation_status}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 # Add a download endpoint to handle direct file downloads
 @app.route('/download/<filename>')
 def download_file(filename):
@@ -1938,7 +1956,7 @@ def portfolio_given(department, user_id):
             return jsonify({"error": "User not found"}), 404
 
         current_status = user_doc.get('status', 'pending')
-        if current_status != 'Portfolio_Mark_pending' and current_status != 'Portfolio_Mark_Dean_pending':
+        if (current_status != 'Portfolio_Mark_pending' and current_status != 'Portfolio_Mark_Dean_pending'):
             return jsonify({
                 "error": "Invalid status transition",
                 "message": "Form must be in Portfolio_Mark_pending or Portfolio_Mark_Dean_pending status to proceed"
@@ -1960,9 +1978,9 @@ def portfolio_given(department, user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/<department>/<verifier_id>/<user_id>/verify-research', methods=['POST'])
-def verify_research(department,verifier_id, user_id):
-    """Changes status from 'verification_pending' to 'Portfolio_Mark_pending'"""
+@app.route('/<department>/<user_id>/director-mark-given', methods=['POST'])
+def director_mark_given(department, user_id):
+    """Changes status from 'Portfolio_mark_director_pending' to 'authority_verification_pending' when portfolio marks are assigned"""
     try:
         collection = department_collections.get(department)
         if collection is None:
@@ -1973,18 +1991,63 @@ def verify_research(department,verifier_id, user_id):
         if not user_doc:
             return jsonify({"error": "User not found"}), 404
 
-        current_status = user_doc.get('status')
-        if current_status != 'verification_pending':
+        current_status = user_doc.get('status', 'pending')
+        if (current_status != 'Portfolio_mark_director_pending'):
             return jsonify({
                 "error": "Invalid status transition",
-                "message": "Form must be in verification_pending status"
+                "message": "Form must be in Portfolio_mark_director_pending status to proceed"
             }), 400
 
         # Update status
         result = collection.update_one(
             {"_id": user_id},
-            {"$set": {"status": "Portfolio_Mark_pending"}}
+            {"$set": {"status": "authority_verification_pending"}}
         )
+
+        if result.modified_count > 0:
+            return jsonify({
+                "message": "Portfolio marks assigned successfully",
+                "new_status": "authority_verification_pending"
+            }), 200
+        return jsonify({"error": "No changes made"}), 400
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/<department>/<verifier_id>/<user_id>/verify-research', methods=['POST'])
+def verify_research(department,verifier_id, user_id):
+    """Changes status from 'verification_pending' to 'Portfolio_Mark_pending'"""
+    try:
+        collection = department_collections.get(department)
+        if collection is None:
+            return jsonify({"error": "Invalid department"}), 400
+
+        # Get current document and check status
+        user_doc = collection.find_one({"_id": user_id})
+        user_info = db_users.find_one({"_id": user_id})
+        if not user_doc or not user_info:
+            return jsonify({"error": "User not found"}), 404
+
+        current_status = user_doc.get('status')
+        faculty_desg = user_info.get('desg')
+
+        if current_status != 'verification_pending':
+            return jsonify({
+                "error": "Invalid status transition",
+                "message": "Form must be in verification_pending status"
+            }), 400
+        
+        if(faculty_desg == "HOD" or faculty_desg == "Dean"):
+            result = collection.update_one(
+                {"_id": user_id},
+                {"$set": {"status": "Portfolio_mark_director_pending"}}
+            )
+        else:
+            result = collection.update_one(
+                {"_id": user_id},
+                {"$set": {"status": "Portfolio_Mark_pending"}}
+            )
         
         committee_head = db_users.find_one({"_id": verifier_id})
         if not committee_head:
