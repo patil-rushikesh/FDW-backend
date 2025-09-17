@@ -99,7 +99,7 @@ def check_and_update_authorities_review_completion(collection, faculty_id):
             {f"{faculty_id}.assigned_externals": 1}
         )
 
-        if not marks_doc or faculty_id not in marks_doc or not assignments_doc or faculty_id not in assignments_doc:
+        if not marks_doc or marks_doc.get(faculty_id) is None or not assignments_doc or assignments_doc.get(faculty_id) is None:
             return False
 
         faculty_marks = marks_doc.get(faculty_id, {})
@@ -108,16 +108,16 @@ def check_and_update_authorities_review_completion(collection, faculty_id):
         # Check if all assigned externals have been reviewed
         external_marks = faculty_marks.get("external_marks", {})
         has_all_externals_reviewed = all(
-            external_marks.get(ext['external_id'], {}).get("marks") is not None # Changed from "total_marks"
+            external_marks.get(ext['external_id'], {}).get("marks") is not None
             for ext in assigned_externals
         )
         
         # Check if director marks are present
-        has_directors = bool(faculty_marks.get("director_marks")) # Changed from "dean_marks"
-        
+        has_directors = bool(faculty_marks.get("director_marks"))
+
         if has_all_externals_reviewed and has_directors:
             # Update interaction_marks document status
-            collection.update_one(
+            result1 = collection.update_one(
                 {"_id": "interaction_marks"},
                 {"$set": {f"{faculty_id}.review_status": "completed"}}
             )
@@ -1086,11 +1086,11 @@ def externalAuthorityMarks(department, external_id, faculty_id):
         if isCompleted :
             print("Updating status to done")
             DeptCollection.update_one(
-            {"_id": faculty_id},
-            {"$set": {
-                "status": "done"
-            }}
-        )
+                {"_id": faculty_id},
+                {"$set": {
+                    "status": "done"
+                }}
+            )
         else :
             print("Not all reviews completed yet")
         return jsonify({"message": "Marks and comments updated successfully"}), 200
@@ -1312,7 +1312,7 @@ def facultyDirectorMarks(department, faculty_id):
         )
 
         # Mark status as done if all reviews are complete
-        isCompleted = check_and_update_authorities_review_completion(collection_faculty, faculty_id)
+        isCompleted = check_and_update_authorities_review_completion(collection_marks, faculty_id)
         if isCompleted:
             collection_dept.update_one(
                 {"_id": faculty_id},
