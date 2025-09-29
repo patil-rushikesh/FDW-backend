@@ -91,7 +91,6 @@ def check_and_update_authorities_review_completion(collection, faculty_id):
     If all reviews are complete, it updates the review status to 'completed'.
     """
     try:
-        # Get the marks document for the specific faculty
         marks_doc = collection.find_one(
             {"_id": "interaction_marks"},
             {f"{faculty_id}": 1}
@@ -103,26 +102,29 @@ def check_and_update_authorities_review_completion(collection, faculty_id):
         
         # Validate that the necessary documents and fields exist
         if not marks_doc or marks_doc.get(faculty_id) is None or not externals_doc:
+            print("First If ne false Diya")
             return False
 
         faculty_marks = marks_doc.get(faculty_id, {})
         all_reviewers = externals_doc.get("reviewers", [])
-
+        print("All Reviewers: ", all_reviewers)
+        print("Faculty Marks: ", faculty_marks)
         # If there are no reviewers defined globally, we can't complete the check.
         if not all_reviewers:
+            print("Second If ne false Diya")
             return False
 
         # Check if all external reviewers (from the 'externals' collection) have reviewed
         submitted_external_marks = faculty_marks.get("external_marks", {})
         has_all_externals_reviewed = all(
-            # Assumes each reviewer in the list has an 'external_id' key
-            submitted_external_marks.get(reviewer.get('external_id'), {}).get("marks") is not None
+            submitted_external_marks.get(reviewer.get('_id'), {}).get("marks") is not None
             for reviewer in all_reviewers
+            if reviewer.get("isExternal")  # only check externals
         )
-        
-        # Check if director marks are present
-        has_directors = bool(faculty_marks.get("director_marks"))
 
+        print("Has All Externals Reviewed: ", has_all_externals_reviewed)
+        has_directors = bool(faculty_marks.get("director_marks"))
+        print("Has Directors: ", has_directors)
         # If all reviews are in, update the status
         if has_all_externals_reviewed and has_directors:
             # Update the status in the interaction_marks document
@@ -130,13 +132,6 @@ def check_and_update_authorities_review_completion(collection, faculty_id):
                 {"_id": "interaction_marks"},
                 {"$set": {f"{faculty_id}.review_status": "completed"}}
             )
-
-            # Update the status in the faculty_assignments document
-            collection.update_one(
-                {"_id": "faculty_assignments", f"{faculty_id}.faculty_info._id": faculty_id},
-                {"$set": {f"{faculty_id}.faculty_info.review_status": "completed"}}
-            )
-            
             return True
         return False
 
@@ -957,6 +952,7 @@ def externalAuthorityMarks(department, external_id, faculty_id):
             upsert=True
         )
         isCompleted = check_and_update_authorities_review_completion(collection, faculty_id)
+        print("Is Completed: ", isCompleted)
         if isCompleted :
             print("Updating status to done")
             DeptCollection.update_one(
@@ -1154,24 +1150,6 @@ def facultyDirectorMarks(department, faculty_id):
 
         total_marks = data['total_marks']
         comments = data.get('comments', '')
-
-        # Update faculty document with Director marks and comments
-        collection_faculty.update_one(
-            {"_id": faculty_id},
-            {"$set": {
-                "isDirectorMarksGiven": True
-            }}
-        )
-
-        # Update faculty_assignments to reflect Director marks
-        collection_marks.update_one(
-            {"_id": "faculty_assignments"},
-            {
-                "$set": {
-                    f"{faculty_id}.faculty_info.isDirectorMarksGiven": True,
-                }
-            }
-        )
 
         # Update interaction_marks document with director's marks and comments
         collection_marks.update_one(
